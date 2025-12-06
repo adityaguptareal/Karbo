@@ -3,7 +3,6 @@ const crypto = require('crypto');
 require('dotenv').config();
 const createOrder = async (req, res) => {
     try {
-        console.log("Request Body:", req.body);
         const { amount } = req.body;
         const options = {
             amount: amount * 100,
