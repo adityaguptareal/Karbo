@@ -20,6 +20,7 @@ const UserSchema = new mongoose.Schema(
       default: "pending_verification",
     },
 
+    rejectionReason: { type: String, default: "" },
     // 🚨 NEW FIELD
     isBlocked: {
       type: Boolean,
@@ -36,6 +37,7 @@ const UserSchema = new mongoose.Schema(
     },
 
     companyDocuments: [{ type: String }],
+
   },
   {
     timestamps: true,

@@ -15,7 +15,7 @@ const TransactionSchema = new mongoose.Schema({
 
   carbonCreditListingId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "CarbonCreditListing",
+    ref: "CarbonCredit",
     required: true,
   },
 
