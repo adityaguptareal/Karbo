@@ -6,6 +6,8 @@ const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const farmlandRoutes = require('./routes/farmLandRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const listingFarmlandRoutes = require('./routes/listingFarmlandRoutes');
+const companyRoutes = require('./routes/companyRoutes');
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
@@ -28,6 +30,8 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/profile', profileRoutes);
 app.use('/api/v1/farmland', farmlandRoutes);
+app.use('/api/v1/farmer-marketplace-listing', listingFarmlandRoutes);
+app.use('/api/v1/company', companyRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
 

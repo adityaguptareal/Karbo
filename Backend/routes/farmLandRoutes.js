@@ -14,21 +14,22 @@ const {
 const upload = require("../utils/upload"); 
 
 
+router.use(auth);
+router.use(isFarmer);
+// Farmer Land management routes
+
+
+
 router.post(
   "/create",
-  auth,
-  isFarmer,
   upload.fields([
     { name: "documents", maxCount: 5 },
     { name: "images", maxCount: 5 }
   ]),
   createFarmland
 );
-
-router.get("/my", auth, isFarmer, getMyFarmlands);
-
-router.get("/:id", auth, getFarmlandById);
-
-router.get("/", auth, searchFarmland);
+router.get("/my",getMyFarmlands);
+router.get("/:id",getFarmlandById);
+router.get("/",searchFarmland);
 
 module.exports = router;
