@@ -1,25 +1,32 @@
+// src/pages/admin/AdminDashboard.tsx
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { StatsCard } from "@/components/shared/StatsCard";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { platformStats, verificationRequests, farmers, companies, transactions } from "@/data/mockData";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   LayoutDashboard,
   FileCheck,
   Users,
   BarChart3,
   Settings,
-  DollarSign,
-  Leaf,
-  TrendingUp,
-  Clock,
+  Eye,
   CheckCircle,
   XCircle,
-  Eye,
-  ArrowRight,
+  Clock,
   AlertCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { adminAPI } from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -29,21 +36,207 @@ const navItems = [
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-const AdminDashboard = () => {
-  const pendingVerifications = verificationRequests.filter(v => v.status === 'pending');
-  const underReviewVerifications = verificationRequests.filter(v => v.status === 'under_review');
-  const recentTransactions = transactions.slice(0, 5);
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: string;
+}
 
-  const priorityColors = {
-    high: 'bg-destructive/10 text-destructive',
-    medium: 'bg-warning/10 text-warning',
-    low: 'bg-muted text-muted-foreground',
+interface Farmland {
+  _id: string;
+  landName: string;
+  location: string;
+  area: number;
+  landType: string;
+  cultivationMethod: string;
+  status: string;
+  farmer: {
+    name: string;
+    email: string;
   };
+  documents: string[];
+  images: string[];
+  submittedAt: string;
+}
+
+const AdminDashboard = () => {
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [pendingFarmlands, setPendingFarmlands] = useState<Farmland[]>([]);
+  const [selectedFarmland, setSelectedFarmland] = useState<Farmland | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<'approve' | 'reject' | 'view'>('view');
+  const [itemType, setItemType] = useState<'user' | 'farmland'>('user');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [usersResult, farmlandsResult] = await Promise.all([
+        adminAPI.getPendingUsers(),
+        adminAPI.getPendingFarmlands()
+      ]);
+
+      if (usersResult.success) {
+        setPendingUsers(usersResult.data || []);
+      }
+
+      if (farmlandsResult.success) {
+        setPendingFarmlands(farmlandsResult.data || []);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewFarmland = async (farmland: Farmland) => {
+    try {
+      const result = await adminAPI.getFarmlandDetails(farmland._id);
+      if (result.success) {
+        setSelectedFarmland(result.data);
+        setItemType('farmland');
+        setDialogType('view');
+        setDialogOpen(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch farmland details",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleApproveUser = async (userId: string) => {
+    try {
+      const result = await adminAPI.approveUser(userId);
+      if (result.success) {
+        toast({
+          title: "User approved",
+          description: "User has been successfully approved"
+        });
+        fetchData();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve user",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectUser = async () => {
+    if (!selectedUser || !rejectReason) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a reason for rejection",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const result = await adminAPI.rejectUser(selectedUser._id, rejectReason);
+      if (result.success) {
+        toast({
+          title: "User rejected",
+          description: "User has been rejected"
+        });
+        setDialogOpen(false);
+        setRejectReason("");
+        fetchData();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject user",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleApproveFarmland = async (farmlandId: string) => {
+    try {
+      const result = await adminAPI.approveFarmland(farmlandId);
+      if (result.success) {
+        toast({
+          title: "Farmland approved",
+          description: "Farmland has been successfully approved"
+        });
+        fetchData();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve farmland",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectFarmland = async (farmlandId: string) => {
+    try {
+      const result = await adminAPI.rejectFarmland(farmlandId);
+      if (result.success) {
+        toast({
+          title: "Farmland rejected",
+          description: "Farmland has been rejected"
+        });
+        setDialogOpen(false);
+        fetchData();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject farmland",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openRejectDialog = (user: User) => {
+    setSelectedUser(user);
+    setItemType('user');
+    setDialogType('reject');
+    setDialogOpen(true);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      pending: "bg-warning/10 text-warning border-warning/20",
+      approved: "bg-success/10 text-success border-success/20",
+      rejected: "bg-destructive/10 text-destructive border-destructive/20"
+    };
+    return colors[status as keyof typeof colors] || colors.pending;
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout navItems={navItems} userType="admin" userName="Admin User">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout navItems={navItems} userType="admin" userName="Admin User">
       <div className="space-y-8">
-        {/* Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">
             Admin Dashboard
@@ -54,199 +247,235 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Total Revenue"
-            value={`$${(platformStats.totalTransactionValue / 1000).toFixed(0)}K`}
-            subtitle="All time"
-            icon={DollarSign}
-            variant="primary"
-            trend={{ value: 12.5, isPositive: true }}
-          />
-          <StatsCard
-            title="Credits Traded"
-            value={platformStats.totalCreditsTraded.toLocaleString()}
-            subtitle="Total credits"
-            icon={Leaf}
-            trend={{ value: 8.2, isPositive: true }}
-          />
-          <StatsCard
-            title="Active Users"
-            value={(platformStats.activeFarmers + platformStats.activeCompanies).toLocaleString()}
-            subtitle={`${platformStats.activeFarmers} farmers, ${platformStats.activeCompanies} companies`}
-            icon={Users}
-            variant="secondary"
-          />
-          <StatsCard
-            title="Pending Verifications"
-            value={pendingVerifications.length + underReviewVerifications.length}
-            subtitle="Needs attention"
-            icon={Clock}
-            variant="accent"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-card rounded-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Pending Users</p>
+              <Users className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">{pendingUsers.length}</p>
+          </div>
+          
+          <div className="bg-card rounded-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Pending Farmlands</p>
+              <FileCheck className="w-5 h-5 text-secondary" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">{pendingFarmlands.length}</p>
+          </div>
+          
+          <div className="bg-card rounded-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Total Pending</p>
+              <Clock className="w-5 h-5 text-warning" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">
+              {pendingUsers.length + pendingFarmlands.length}
+            </p>
+          </div>
+          
+          <div className="bg-card rounded-xl border border-border p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-muted-foreground">Action Required</p>
+              <AlertCircle className="w-5 h-5 text-destructive" />
+            </div>
+            <p className="text-3xl font-bold text-foreground">
+              {pendingUsers.length + pendingFarmlands.length}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Verification Queue */}
-          <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-semibold text-lg text-foreground">Verification Queue</h2>
-                <p className="text-sm text-muted-foreground">{pendingVerifications.length + underReviewVerifications.length} items need review</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Pending Users */}
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h2 className="font-semibold text-lg text-foreground mb-6">Pending User Verifications</h2>
+            
+            {pendingUsers.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+                <p className="text-muted-foreground">No pending user verifications</p>
               </div>
-              <Button variant="default" asChild>
-                <Link to="/admin/verification">
-                  View All
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
-            </div>
-            
-            <div className="space-y-3">
-              {verificationRequests.slice(0, 4).map((request) => (
-                <div key={request.id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <FileCheck className="w-5 h-5 text-accent" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium text-foreground">{request.farmerName}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${priorityColors[request.priority]}`}>
-                        {request.priority}
-                      </span>
+            ) : (
+              <div className="space-y-4">
+                {pendingUsers.map((user) => (
+                  <div key={user._id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{user.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {user.role}
+                        </Badge>
+                        <Badge className={getStatusBadge(user.status)}>
+                          {user.status}
+                        </Badge>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{request.documentType} • {request.submittedDate}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleApproveUser(user._id)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => openRejectDialog(user)}
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <StatusBadge status={request.status} />
-                  <Button variant="ghost" size="icon">
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-            
-            {pendingVerifications.length === 0 && underReviewVerifications.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <CheckCircle className="w-12 h-12 text-success mb-4" />
-                <p className="text-foreground font-medium">All caught up!</p>
-                <p className="text-sm text-muted-foreground">No pending verifications</p>
+                ))}
               </div>
             )}
           </div>
 
-          {/* Quick Stats */}
-          <div className="space-y-6">
-            {/* User Breakdown */}
-            <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">User Breakdown</h3>
+          {/* Pending Farmlands */}
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h2 className="font-semibold text-lg text-foreground mb-6">Pending Farmland Verifications</h2>
+            
+            {pendingFarmlands.length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+                <p className="text-muted-foreground">No pending farmland verifications</p>
+              </div>
+            ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Farmers</span>
-                  <span className="font-semibold text-foreground">{platformStats.activeFarmers}</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full" 
-                    style={{ width: `${(platformStats.activeFarmers / (platformStats.activeFarmers + platformStats.activeCompanies)) * 100}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Companies</span>
-                  <span className="font-semibold text-foreground">{platformStats.activeCompanies}</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-secondary h-2 rounded-full" 
-                    style={{ width: `${(platformStats.activeCompanies / (platformStats.activeFarmers + platformStats.activeCompanies)) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Alerts */}
-            <div className="bg-warning/5 rounded-xl border border-warning/20 p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <AlertCircle className="w-5 h-5 text-warning" />
-                <h3 className="font-semibold text-foreground">Alerts</h3>
-              </div>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-warning" />
-                  {pendingVerifications.filter(v => v.priority === 'high').length} high priority verifications
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                  3 new user registrations today
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Transactions */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-semibold text-lg text-foreground">Recent Transactions</h2>
-            <Button variant="ghost" size="sm">View All</Button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Description</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Amount</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-border hover:bg-muted/50">
-                    <td className="py-3 px-4 text-sm font-mono text-muted-foreground">{transaction.id}</td>
-                    <td className="py-3 px-4 text-sm capitalize text-foreground">{transaction.type}</td>
-                    <td className="py-3 px-4 text-sm text-foreground">{transaction.description}</td>
-                    <td className="py-3 px-4 text-sm font-medium text-foreground">${transaction.amount.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{transaction.date}</td>
-                    <td className="py-3 px-4">
-                      <StatusBadge status={transaction.status} />
-                    </td>
-                  </tr>
+                {pendingFarmlands.map((farmland) => (
+                  <div key={farmland._id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{farmland.landName}</p>
+                      <p className="text-sm text-muted-foreground">{farmland.location}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {farmland.area} acres
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {farmland.landType}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleViewFarmland(farmland)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleApproveFarmland(farmland._id)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRejectFarmland(farmland._id)}
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/admin/verification" className="flex flex-col items-center gap-2">
-              <FileCheck className="w-6 h-6" />
-              <span>Review Verifications</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/admin/users" className="flex flex-col items-center gap-2">
-              <Users className="w-6 h-6" />
-              <span>Manage Users</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/admin/analytics" className="flex flex-col items-center gap-2">
-              <BarChart3 className="w-6 h-6" />
-              <span>View Analytics</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/admin/settings" className="flex flex-col items-center gap-2">
-              <Settings className="w-6 h-6" />
-              <span>Platform Settings</span>
-            </Link>
-          </Button>
-        </div>
+        {/* Dialog for viewing/rejecting */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {dialogType === 'view' && 'Farmland Details'}
+                {dialogType === 'reject' && `Reject ${itemType === 'user' ? 'User' : 'Farmland'}`}
+              </DialogTitle>
+              <DialogDescription>
+                {dialogType === 'view' && 'Review farmland information and documents'}
+                {dialogType === 'reject' && 'Provide a reason for rejection'}
+              </DialogDescription>
+            </DialogHeader>
+
+            {dialogType === 'view' && selectedFarmland && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Land Name</Label>
+                    <p className="text-foreground">{selectedFarmland.landName}</p>
+                  </div>
+                  <div>
+                    <Label>Location</Label>
+                    <p className="text-foreground">{selectedFarmland.location}</p>
+                  </div>
+                  <div>
+                    <Label>Area</Label>
+                    <p className="text-foreground">{selectedFarmland.area} acres</p>
+                  </div>
+                  <div>
+                    <Label>Land Type</Label>
+                    <p className="text-foreground">{selectedFarmland.landType}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Cultivation Method</Label>
+                    <p className="text-foreground">{selectedFarmland.cultivationMethod}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label>Farmer</Label>
+                    <p className="text-foreground">{selectedFarmland.farmer.name} ({selectedFarmland.farmer.email})</p>
+                  </div>
+                </div>
+
+                {selectedFarmland.images && selectedFarmland.images.length > 0 && (
+                  <div>
+                    <Label>Farm Images</Label>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {selectedFarmland.images.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt={`Farm ${idx + 1}`}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {dialogType === 'reject' && itemType === 'user' && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="reason">Rejection Reason *</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Enter reason for rejection..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Close
+              </Button>
+              {dialogType === 'reject' && itemType === 'user' && (
+                <Button variant="destructive" onClick={handleRejectUser}>
+                  Confirm Rejection
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

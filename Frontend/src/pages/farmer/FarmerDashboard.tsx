@@ -1,173 +1,309 @@
+// src/pages/farmer/FarmerDashboard.tsx
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { farmers, transactions, verificationRequests } from "@/data/mockData";
-import { LayoutDashboard, Upload, Leaf, Wallet, FileText, Settings, TrendingUp, DollarSign, Clock, CheckCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { LayoutDashboard, Upload, Leaf, Wallet, FileText, Settings, TrendingUp, DollarSign, Clock, CheckCircle, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-const navItems = [{
-  label: "Dashboard",
-  href: "/farmer/dashboard",
-  icon: LayoutDashboard
-}, {
-  label: "Upload Documents",
-  href: "/farmer/upload",
-  icon: Upload
-}, {
-  label: "My Credits",
-  href: "/farmer/credits",
-  icon: Leaf
-}, {
-  label: "Wallet",
-  href: "/farmer/wallet",
-  icon: Wallet
-}, {
-  label: "Documents",
-  href: "/farmer/documents",
-  icon: FileText
-}, {
-  label: "Settings",
-  href: "/farmer/settings",
-  icon: Settings
-}];
-const currentFarmer = farmers[0];
+import { toast } from "@/hooks/use-toast";
+import { profileAPI, farmlandAPI } from "@/services/api";
+
+const navItems = [
+  { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
+  { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "My Farmlands", href: "/farmer/farmlands", icon: Leaf },
+  { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
+  { label: "Documents", href: "/farmer/documents", icon: FileText },
+  { label: "Settings", href: "/farmer/settings", icon: Settings },
+];
+
+interface FarmerProfile {
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+interface Farmland {
+  _id: string;
+  landName: string;
+  location: string;
+  area: number;
+  landType: string;
+  cultivationMethod: string;
+  status: string;
+  createdAt: string;
+  images: string[];
+}
+
 const FarmerDashboard = () => {
-  const recentTransactions = transactions.slice(0, 4);
-  const pendingVerifications = verificationRequests.filter(v => v.status === 'pending' || v.status === 'under_review');
-  return <DashboardLayout navItems={navItems} userType="farmer" userName={currentFarmer.name}>
+  const [profile, setProfile] = useState<FarmerProfile | null>(null);
+  const [farmlands, setFarmlands] = useState<Farmland[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [profileResult, farmlandsResult] = await Promise.all([
+        profileAPI.getProfile(),
+        farmlandAPI.getMyFarmlands()
+      ]);
+
+      if (profileResult.success) {
+        setProfile(profileResult.data);
+      }
+
+      if (farmlandsResult.success) {
+        setFarmlands(farmlandsResult.data || []);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch dashboard data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const totalFarmlands = farmlands.length;
+  const approvedFarmlands = farmlands.filter(f => f.status === 'approved').length;
+  const pendingFarmlands = farmlands.filter(f => f.status === 'pending').length;
+  const totalArea = farmlands.reduce((sum, f) => sum + f.area, 0);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout navItems={navItems} userType="farmer" userName="Loading...">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout navItems={navItems} userType="farmer" userName={profile?.name || "Farmer"}>
       <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Welcome back, {currentFarmer.name.split(' ')[0]}!
+            Welcome back, {profile?.name.split(' ')[0]}!
           </h1>
           <p className="text-muted-foreground">
             Here's an overview of your farm's carbon credit activity
           </p>
         </div>
 
+        {/* Account Status Alert */}
+        {profile?.status === 'pending' && (
+          <div className="bg-warning/10 border border-warning/20 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-warning" />
+              <div>
+                <p className="font-medium text-foreground">Account Under Review</p>
+                <p className="text-sm text-muted-foreground">
+                  Your account is being verified by our admin team. You'll be notified once approved.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard title="Total Credits" value={currentFarmer.totalCredits.toLocaleString()} subtitle="Lifetime earned" icon={Leaf} variant="primary" />
-          <StatsCard title="Available Credits" value={currentFarmer.creditsAvailable.toLocaleString()} subtitle="Ready to sell" icon={TrendingUp} trend={{
-          value: 8.5,
-          isPositive: true
-        }} />
-          <StatsCard title="Credits Sold" value={currentFarmer.creditsSold.toLocaleString()} subtitle="Total sold" icon={DollarSign} variant="secondary" />
-          <StatsCard title="Pending Verification" value={pendingVerifications.length} subtitle="Documents in review" icon={Clock} variant="accent" />
+          <StatsCard 
+            title="Total Farmlands" 
+            value={totalFarmlands.toString()} 
+            subtitle="Registered farms" 
+            icon={Leaf} 
+            variant="primary" 
+          />
+          <StatsCard 
+            title="Approved Farmlands" 
+            value={approvedFarmlands.toString()} 
+            subtitle="Verified and active" 
+            icon={CheckCircle} 
+            trend={{ value: approvedFarmlands > 0 ? 100 : 0, isPositive: true }}
+          />
+          <StatsCard 
+            title="Pending Verification" 
+            value={pendingFarmlands.toString()} 
+            subtitle="Under review" 
+            icon={Clock} 
+            variant="accent" 
+          />
+          <StatsCard 
+            title="Total Area" 
+            value={`${totalArea}`} 
+            subtitle="Acres registered" 
+            icon={TrendingUp} 
+            variant="secondary" 
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Credits Overview */}
+          {/* Farmlands Overview */}
           <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-semibold text-lg text-foreground">Credits Overview</h2>
+              <h2 className="font-semibold text-lg text-foreground">Your Farmlands</h2>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/farmer/credits">View All</Link>
+                <Link to="/farmer/farmlands">View All</Link>
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="p-4 bg-primary/5 rounded-xl">
-                <p className="text-sm text-muted-foreground mb-1">Available for Sale</p>
-                <p className="text-3xl font-bold text-primary">{currentFarmer.creditsAvailable}</p>
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-muted-foreground">of {currentFarmer.totalCredits} total</span>
-                    <span className="font-medium">{Math.round(currentFarmer.creditsAvailable / currentFarmer.totalCredits * 100)}%</span>
+            {farmlands.length === 0 ? (
+              <div className="text-center py-12">
+                <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <p className="text-foreground font-medium mb-2">No farmlands registered yet</p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Start by uploading your first farmland documentation
+                </p>
+                <Button variant="default" asChild>
+                  <Link to="/farmer/upload">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Documents
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {farmlands.slice(0, 3).map((farmland) => (
+                  <div key={farmland._id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    {farmland.images && farmland.images.length > 0 ? (
+                      <img 
+                        src={farmland.images[0]} 
+                        alt={farmland.landName}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Leaf className="w-8 h-8 text-primary" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground">{farmland.landName}</p>
+                      <p className="text-sm text-muted-foreground">{farmland.location}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-muted-foreground">{farmland.area} acres</span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">{farmland.landType}</span>
+                      </div>
+                    </div>
+                    <StatusBadge status={farmland.status} />
                   </div>
-                  <Progress value={currentFarmer.creditsAvailable / currentFarmer.totalCredits * 100} className="h-2" />
+                ))}
+
+                {farmlands.length > 3 && (
+                  <Button variant="ghost" className="w-full" asChild>
+                    <Link to="/farmer/farmlands">
+                      View all {farmlands.length} farmlands
+                      <ArrowUpRight className="w-4 h-4 ml-2" />
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Status Breakdown */}
+            {totalFarmlands > 0 && (
+              <div className="border-t border-border pt-6 mt-6">
+                <h3 className="font-medium text-foreground mb-4">Verification Status</h3>
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Approved</span>
+                      <span className="font-medium text-foreground">
+                        {approvedFarmlands} of {totalFarmlands}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={(approvedFarmlands / totalFarmlands) * 100} 
+                      className="h-2 bg-success/20"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Pending</span>
+                      <span className="font-medium text-foreground">
+                        {pendingFarmlands} of {totalFarmlands}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={(pendingFarmlands / totalFarmlands) * 100} 
+                      className="h-2 bg-warning/20"
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <div className="p-4 bg-secondary/5 rounded-xl">
-                <p className="text-sm text-muted-foreground mb-1">Estimated Value</p>
-                <p className="text-3xl font-bold text-secondary">
-                  ${(currentFarmer.creditsAvailable * 19.5).toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground mt-3">
-                  Based on avg. market price of  ₹195/credit
-                </p>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="space-y-6">
+            <div className="bg-card rounded-xl border border-border p-6">
+              <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <Button variant="default" className="w-full justify-start" asChild>
+                  <Link to="/farmer/upload">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload New Farmland
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link to="/farmer/farmlands">
+                    <Leaf className="w-4 h-4 mr-2" />
+                    View All Farmlands
+                  </Link>
+                </Button>
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <Link to="/farmer/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Account Settings
+                  </Link>
+                </Button>
               </div>
             </div>
 
-            {/* Verification Status */}
-            <div className="border-t border-border pt-6">
-              <h3 className="font-medium text-foreground mb-4">Verification Queue</h3>
-              {pendingVerifications.length > 0 ? <div className="space-y-3">
-                  {pendingVerifications.slice(0, 2).map(verification => <div key={verification.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-accent" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{verification.documentType}</p>
-                          <p className="text-sm text-muted-foreground">Submitted {verification.submittedDate}</p>
-                        </div>
-                      </div>
-                      <StatusBadge status={verification.status} />
-                    </div>)}
-                </div> : <div className="flex items-center gap-3 p-4 bg-success/5 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-success" />
-                  <p className="text-sm text-foreground">All documents verified!</p>
-                </div>}
+            {/* Account Info */}
+            <div className="bg-card rounded-xl border border-border p-6">
+              <h3 className="font-semibold text-foreground mb-4">Account Information</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <StatusBadge status={profile?.status || 'pending'} />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="text-foreground">{profile?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Role:</span>
+                  <span className="text-foreground capitalize">{profile?.role}</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Recent Activity */}
-          <div className="bg-card rounded-xl border border-border p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-semibold text-lg text-foreground">Recent Activity</h2>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/farmer/wallet">View All</Link>
+            {/* Help Section */}
+            <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
+              <h3 className="font-semibold text-foreground mb-2">Need Help?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Check our documentation or contact support for assistance with verification.
+              </p>
+              <Button variant="outline" size="sm" className="w-full">
+                Contact Support
               </Button>
             </div>
-            
-            <div className="space-y-4">
-              {recentTransactions.map(transaction => <div key={transaction.id} className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${transaction.type === 'sale' ? 'bg-success/10' : transaction.type === 'withdrawal' ? 'bg-accent/10' : 'bg-muted'}`}>
-                    {transaction.type === 'sale' ? <ArrowUpRight className="w-5 h-5 text-success" /> : <ArrowDownRight className="w-5 h-5 text-accent" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {transaction.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{transaction.date}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${transaction.type === 'sale' ? 'text-success' : 'text-foreground'}`}>
-                      {transaction.type === 'sale' ? '+' : '-'}${transaction.amount}
-                    </p>
-                    {transaction.credits && <p className="text-xs text-muted-foreground">{transaction.credits} credits</p>}
-                  </div>
-                </div>)}
-            </div>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button variant="default" size="lg" className="h-auto py-6" asChild>
-            <Link to="/farmer/upload" className="flex flex-col items-center gap-2">
-              <Upload className="w-6 h-6" />
-              <span>Upload Documents</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/farmer/credits" className="flex flex-col items-center gap-2">
-              <Leaf className="w-6 h-6" />
-              <span>View Credits</span>
-            </Link>
-          </Button>
-          <Button variant="outline" size="lg" className="h-auto py-6" asChild>
-            <Link to="/farmer/wallet" className="flex flex-col items-center gap-2">
-              <Wallet className="w-6 h-6" />
-              <span>Withdraw Earnings</span>
-            </Link>
-          </Button>
-        </div>
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 };
+
 export default FarmerDashboard;
