@@ -16,7 +16,7 @@ const CarbonCreditListingSchema = new mongoose.Schema({
   totalCredits: { type: Number, required: true },
   pricePerCredit: { type: Number, required: true },
   
-  totalValue: { type: Number, required: true }, // totalCredits * pricePerCredit
+  totalValue: { type: Number, required: true },
 
   description: String,
 
@@ -29,4 +29,4 @@ const CarbonCreditListingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-modeule.exports = mongoose.model("CarbonCredit", CarbonCreditListingSchema);
+module.exports = mongoose.model("CarbonCredit", CarbonCreditListingSchema);

@@ -42,4 +42,5 @@ const FarmlandSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Farmland", FarmlandSchema);
+// module.exports = mongoose.model("Farmland", FarmlandSchema);
+module.exports = mongoose.models.Farmland || mongoose.model("Farmland", FarmlandSchema);
