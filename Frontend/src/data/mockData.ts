@@ -48,8 +48,11 @@ export interface Transaction {
   amount: number;
   credits?: number;
   date: string;
-  status: 'completed' | 'pending' | 'failed';
+  status: 'completed' | 'pending' | 'failed' | 'verified';
   description: string;
+  creditId?: string;
+  companyId?: string;
+  farmerId?: string;
 }
 
 export interface VerificationRequest {
@@ -305,12 +308,12 @@ export const companies: Company[] = [
   },
   {
     id: "c2",
-    name: "Green Manufacturing Co.",
+    name: "Green Manufacturing Co.", // This is our main company for dashboard
     industry: "Manufacturing",
     logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100",
-    totalPurchased: 5000,
-    totalSpent: 95000,
-    co2Offset: 5000
+    totalPurchased: 3900, // Updated: sum of all credits purchased
+    totalSpent: 80775,    // Updated: sum of all amounts
+    co2Offset: 3900       // Updated: matches totalPurchased
   },
   {
     id: "c3",
@@ -323,6 +326,98 @@ export const companies: Company[] = [
   }
 ];
 
+// Add these purchase transactions for companies
+export const companyTransactions: Transaction[] = [
+  {
+    id: "t7",
+    type: "purchase",
+    amount: 9250,
+    credits: 500,
+    date: "2024-02-15",
+    status: "completed",
+    description: "Purchased Organic Farming credits from Green Valley Organics",
+    creditId: "cc1", // Links to carbonCredits
+    companyId: "c2"  // Green Manufacturing Co.
+  },
+  {
+    id: "t8",
+    type: "purchase",
+    amount: 7700,
+    credits: 350,
+    date: "2024-02-12",
+    status: "completed",
+    description: "Purchased No-Till Agriculture credits from Green Valley Organics",
+    creditId: "cc2",
+    companyId: "c2"
+  },
+  {
+    id: "t9",
+    type: "purchase",
+    amount: 9000,
+    credits: 600,
+    date: "2024-02-10",
+    status: "completed",
+    description: "Purchased Stubble Burning Avoidance credits from Sunrise Sustainable Farm",
+    creditId: "cc3",
+    companyId: "c2"
+  },
+  {
+    id: "t10",
+    type: "purchase",
+    amount: 20000,
+    credits: 800,
+    date: "2024-02-08",
+    status: "completed",
+    description: "Purchased Agroforestry credits from Savanna Green Farms",
+    creditId: "cc4",
+    companyId: "c2"
+  },
+  {
+    id: "t11",
+    type: "purchase",
+    amount: 12600,
+    credits: 450,
+    date: "2024-02-05",
+    status: "verified",
+    description: "Purchased Biodiversity Conservation credits from Savanna Green Farms",
+    creditId: "cc5",
+    companyId: "c2"
+  },
+  {
+    id: "t12",
+    type: "purchase",
+    amount: 8000,
+    credits: 400,
+    date: "2024-02-01",
+    status: "completed",
+    description: "Purchased Regenerative Grazing credits from Prairie Wind Ranch",
+    creditId: "cc6",
+    companyId: "c2"
+  },
+  {
+    id: "t13",
+    type: "purchase",
+    amount: 9350,
+    credits: 550,
+    date: "2024-01-28",
+    status: "completed",
+    description: "Purchased Solar Irrigation credits from Tierra Verde Estate",
+    creditId: "cc8",
+    companyId: "c2"
+  },
+  {
+    id: "t14",
+    type: "purchase",
+    amount: 4875,
+    credits: 250,
+    date: "2024-01-25",
+    status: "pending",
+    description: "Purchased Organic Tea Cultivation credits from Harmony Fields",
+    creditId: "cc7",
+    companyId: "c2"
+  },
+];
+
 export const transactions: Transaction[] = [
   { id: "t1", type: "sale", amount: 925, credits: 50, date: "2024-02-15", status: "completed", description: "Sold to EcoTech Solutions" },
   { id: "t2", type: "sale", amount: 1850, credits: 100, date: "2024-02-10", status: "completed", description: "Sold to Green Manufacturing" },
@@ -331,6 +426,8 @@ export const transactions: Transaction[] = [
   { id: "t5", type: "sale", amount: 555, credits: 30, date: "2024-01-28", status: "pending", description: "Pending verification" },
   { id: "t6", type: "withdrawal", amount: 1500, date: "2024-01-20", status: "completed", description: "Bank transfer" },
 ];
+
+export const allTransactions = [...transactions, ...companyTransactions];
 
 export const verificationRequests: VerificationRequest[] = [
   {

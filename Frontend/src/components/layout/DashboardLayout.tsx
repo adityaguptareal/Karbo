@@ -71,7 +71,7 @@ export function DashboardLayout({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link to="/settings">
+                  <Link to="/company/settings">
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Link>

@@ -35,7 +35,7 @@ export function CreditCard({ credit, onAddToCart, viewMode = 'grid' }: CreditCar
           </Badge>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-2xl font-bold text-primary">${credit.pricePerCredit}</p>
+          <p className="text-2xl font-bold text-primary">₹{credit.pricePerCredit}</p>
           <p className="text-sm text-muted-foreground">{credit.credits} credits</p>
         </div>
         <Button 
@@ -98,7 +98,7 @@ export function CreditCard({ credit, onAddToCart, viewMode = 'grid' }: CreditCar
         
         <div className="flex items-center justify-between pt-4 border-t border-border">
           <div>
-            <p className="text-2xl font-bold text-primary">${credit.pricePerCredit}</p>
+            <p className="text-2xl font-bold text-primary">₹{credit.pricePerCredit}</p>
             <p className="text-xs text-muted-foreground">per credit • {credit.credits} available</p>
           </div>
           <Button variant="default" size="sm" onClick={() => onAddToCart?.(credit)}>
