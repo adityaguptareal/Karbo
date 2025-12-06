@@ -1,5 +1,5 @@
 const User = require("../models/userModel.js");
-const Farmland = require("../models/farmlandModel.js");
+const Farmland = require("../models/farmLandModel.js");
 const z = require("zod");
 
 

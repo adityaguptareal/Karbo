@@ -1,5 +1,5 @@
 const CarbonCreditListing = require("../models/carbonCreditModel"); 
-const Farmland = require("../models/farmlandModel");
+const Farmland = require("../models/farmLandModel");
 const User = require("../models/userModel");
 const z = require("zod");
 
