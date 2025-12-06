@@ -20,6 +20,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+    console.log('Health check requested');
     res.json({ status: 'OK', timestamp: new Date() });
 });
 
