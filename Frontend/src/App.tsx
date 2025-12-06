@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import CompanyPurchases from "./components/company/CompanyPurchases";
 
 // Pages
 import Index from "./pages/Index";
@@ -15,6 +16,9 @@ import FarmerUpload from "./pages/farmer/FarmerUpload";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import CompanyImpactReport from "./components/company/CompanyImpactReport";
+import CompanySettings from "./components/company/CompanySettings";
+import CompanyMarketplace from "./components/company/CompanyMarketplace";
 
 const queryClient = new QueryClient();
 
@@ -44,9 +48,10 @@ const App = () => (
           
           {/* Company Dashboard Routes */}
           <Route path="/company/dashboard" element={<CompanyDashboard />} />
-          <Route path="/company/purchases" element={<CompanyDashboard />} />
-          <Route path="/company/impact" element={<CompanyDashboard />} />
-          <Route path="/company/settings" element={<CompanyDashboard />} />
+          <Route path="/company/marketplace" element={<CompanyMarketplace />} />
+          <Route path="/company/purchases" element={<CompanyPurchases />} />
+          <Route path="/company/impact" element={<CompanyImpactReport />} />
+          <Route path="/company/settings" element={<CompanySettings />} />
           
           {/* Admin Dashboard Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />

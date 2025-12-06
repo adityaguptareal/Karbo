@@ -1,4 +1,5 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import CompanyPurchases from "@/components/company/CompanyPurchases";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { CreditCard } from "@/components/shared/CreditCard";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { Link } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingBag },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
   { label: "Settings", href: "/company/settings", icon: Settings },
@@ -52,7 +53,7 @@ const CompanyDashboard = () => {
             </p>
           </div>
           <Button variant="hero" asChild>
-            <Link to="/marketplace">
+            <Link to="/company/marketplace">
               <ShoppingBag className="w-4 h-4 mr-2" />
               Browse Marketplace
             </Link>
@@ -63,7 +64,7 @@ const CompanyDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="CO₂ Offset"
-            value={`${(currentCompany.co2Offset / 1000).toFixed(1)}K`}
+            value={`₹${(currentCompany.co2Offset / 1000).toFixed(1)}K`}
             subtitle="Tons offset"
             icon={Globe}
             variant="primary"
@@ -78,7 +79,7 @@ const CompanyDashboard = () => {
           />
           <StatsCard
             title="Total Investment"
-            value={`$${(currentCompany.totalSpent / 1000).toFixed(0)}K`}
+            value={`₹${(currentCompany.totalSpent / 1000).toFixed(0)}K`}
             subtitle="In carbon credits"
             icon={DollarSign}
           />
@@ -148,7 +149,7 @@ const CompanyDashboard = () => {
               <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <Button variant="default" className="w-full justify-between" asChild>
-                  <Link to="/marketplace">
+                  <Link to="/company/marketplace">
                     Browse Credits
                     <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -194,7 +195,7 @@ const CompanyDashboard = () => {
               <p className="text-sm text-muted-foreground">Hand-picked credits matching your sustainability goals</p>
             </div>
             <Button variant="ghost" asChild>
-              <Link to="/marketplace">View All <ArrowRight className="w-4 h-4 ml-2" /></Link>
+              <Link to="/company/marketplace">View All <ArrowRight className="w-4 h-4 ml-2" /></Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
