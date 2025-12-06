@@ -5,6 +5,11 @@ const { loginUser } = require("../controllers/authController");
 const auth = require("../middleware/authMiddleware");
 const isAdmin = require("../middleware/isAdmin");
 const { getPendingFarmlands, getFarmlandFullDetails, approveFarmland, rejectFarmland } = require("../controllers/adminFarmlandController");
+const {
+  getPendingCompanies,
+  approveCompany,
+  rejectCompany
+} = require("../controllers/adminController");
 
 router.post("/login", loginUser);
 
@@ -27,6 +32,10 @@ router.get('/farmlands/:id', getFarmlandFullDetails);
 router.patch('/farmlands/approve/:id',approveFarmland);
 router.patch('/farmlands/reject/:id',rejectFarmland);
 
+// company management routes
+router.get("/company/pending", getPendingCompanies);
+router.patch("/company/approve/:id", approveCompany);
+router.patch("/company/reject/:id", rejectCompany);
 
 
 module.exports = router;

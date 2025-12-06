@@ -64,7 +64,7 @@ const PendingUsers = async (req, res) => {
     const pendingUsers = await User.find({
       status: "pending_verification",
       role: { $in: ["farmer", "company"] }
-    }).select("-passwordHash -googleId -__v");
+    }).select("-passwordHash -googleId -__v").sort({ createdAt: 1 });
 
     return res.status(200).json({
       msg: "Pending users fetched successfully",
@@ -176,8 +176,81 @@ const toggleBlockUser = async (req, res) => {
 };
 
 
-;
+const getPendingCompanies = async (req, res) => {
+  try {
+    const companies = await User.find({
+      role: "company",
+      status: "pending_verification"
+    }).select("-passwordHash -googleId -__v").sort({ createdAt: 1 });
+
+    return res.status(200).json({
+      msg: "Pending companies fetched successfully",
+      count: companies.length,
+      companies,
+    });
+  } catch (err) {
+    return res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+const approveCompany = async (req, res) => {
+  try {
+    const company = await User.findById(req.params.id);
+
+    if (!company) return res.status(404).json({ msg: "Company not found" });
+
+    company.status = "verified";
+    company.rejectionReason = "";
+    await company.save();
+
+    return res.status(200).json({
+      msg: "Company verified successfully",
+      company: {
+        id: company._id,
+        name: company.name,
+        email: company.email,
+        status: company.status,
+      },
+    });
+
+  } catch (err) {
+    return res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+const rejectCompany = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    if (!reason || reason.trim() === "") {
+      return res.status(400).json({ msg: "Rejection reason is required" });
+    }
+
+    const company = await User.findById(req.params.id);
+    if (!company) return res.status(404).json({ msg: "Company not found" });
+
+    company.status = "rejected";
+    company.rejectionReason = reason;
+    await company.save();
+
+    return res.status(200).json({
+      msg: "Company rejected successfully",
+      company: {
+        id: company._id,
+        name: company.name,
+        status: company.status,
+        rejectionReason: reason,
+      },
+    });
+
+  } catch (err) {
+    return res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
 module.exports = {
+  rejectCompany,
+  approveCompany,
+  getPendingCompanies,
   createAdmin,
   PendingUsers,
     approveUser,
