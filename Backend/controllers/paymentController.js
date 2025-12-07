@@ -22,7 +22,7 @@ const createOrder = async (req, res) => {
         const options = {
             amount: amount * 100, 
             currency: "INR",
-            receipt: "receipt_" + (listingId || "generic") + "_" + Date.now()
+            receipt: "rcpt_" + (listingId.slice(-8) || "generic") + "_" + Date.now()
         };
 
         const order = await razorpayInstance.orders.create(options);
@@ -44,6 +44,7 @@ const createOrder = async (req, res) => {
 
 
 const verifyPayment = async (req, res) => {
+    console.log("Request");
     try {
         const {
             razorpay_payment_id,
@@ -51,6 +52,11 @@ const verifyPayment = async (req, res) => {
             razorpay_signature,
             listingId
         } = req.body;
+
+        console.log(razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature,
+            listingId);
 
         // Validate input
         if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
