@@ -12,6 +12,8 @@ import Marketplace from "./pages/Marketplace";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import FarmerDashboard from "./pages/farmer/FarmerDashboard";
+import FarmerMarketplace from "./pages/farmer/FarmerMarketPlace";
+import FarmerSettings from "./pages/farmer/FarmerSettings";
 import FarmerUpload from "./pages/farmer/FarmerUpload";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -41,11 +43,14 @@ const App = () => (
           
           {/* Farmer Dashboard Routes */}
           <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+          <Route path="/farmer/marketplace" element={<FarmerMarketplace />} />
+
+
           <Route path="/farmer/upload" element={<FarmerUpload />} />
           <Route path="/farmer/credits" element={<FarmerDashboard />} />
           <Route path="/farmer/wallet" element={<FarmerDashboard />} />
           <Route path="/farmer/documents" element={<FarmerDashboard />} />
-          <Route path="/farmer/settings" element={<FarmerDashboard />} />
+          <Route path="/farmer/settings" element={<FarmerSettings />} />
           
           {/* Company Dashboard Routes */}
           <Route path="/company/dashboard" element={<CompanyDashboard />} />
