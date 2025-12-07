@@ -8,7 +8,7 @@ import { Leaf, Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react"
 import { toast } from "@/hooks/use-toast";
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       toast({
         title: "Validation Error",
@@ -35,15 +35,18 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, {
+      // Use authAPI from api.ts
+      const response = await import("@/services/api").then(m => m.authAPI.login({
         email: formData.email,
         password: formData.password
-      });
+      }));
 
-      const { token, role, status, msg } = response.data;
+      const { token, role, status, msg } = response;
 
-      // Store token and user data in localStorage
-      localStorage.setItem('token', token);
+      // Token is already stored by authAPI.login, but we can double check or store extra user info if needed
+      // authAPI.login stores: authToken, userRole, userId
+
+      // We also store 'user' object for backward compatibility or other components
       localStorage.setItem('user', JSON.stringify({
         email: formData.email,
         role: role,
@@ -63,17 +66,16 @@ const Login = () => {
       } else if (role === 'admin') {
         navigate('/admin/dashboard');
       } else {
-        // Default fallback
         navigate('/');
       }
 
     } catch (error: any) {
       console.error('Login error:', error);
-      
-      const errorMsg = error.response?.data?.msg || 
-                      error.response?.data?.message || 
-                      'Invalid email or password';
-      
+
+      const errorMsg = error.msg ||
+        error.message ||
+        'Invalid email or password';
+
       toast({
         title: "Login Failed",
         description: errorMsg,
@@ -90,8 +92,8 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-background">
         <div className="w-full max-w-md space-y-8">
           {/* Back Button */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

@@ -96,7 +96,7 @@ const approveUser = async (req, res) => {
 
     // Approve user
     user.status = "verified";
-    user.rejectionReason = ""; 
+    user.rejectionReason = "";
     await user.save();
 
     return res.status(200).json({
@@ -118,7 +118,7 @@ const approveUser = async (req, res) => {
   }
 };
 const rejectUser = async (req, res) => {
-    try {
+  try {
     const userId = req.params.id;
     const { reason } = req.body;
 
@@ -247,15 +247,28 @@ const rejectCompany = async (req, res) => {
     return res.status(500).json({ msg: "Server error", error: err.message });
   }
 };
+const getUserDetails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-passwordHash -googleId -__v");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    return res.status(200).json({ msg: "User details fetched", user });
+  } catch (error) {
+    console.error("getUserDetails error:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   rejectCompany,
   approveCompany,
   getPendingCompanies,
   createAdmin,
   PendingUsers,
-    approveUser,
-    rejectUser,
-    toggleBlockUser
-
+  approveUser,
+  rejectUser,
+  toggleBlockUser,
+  getUserDetails
 };
 
