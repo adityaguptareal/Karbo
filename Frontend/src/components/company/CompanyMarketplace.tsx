@@ -41,8 +41,26 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
 
+interface CarbonListing {
+  _id: string;
+  totalCredits: number;
+  pricePerCredit: number;
+  totalValue: number;
+  description: string;
+  status: string;
+  farmlandId: {
+    landName: string;
+    location: string;
+    area: number;
+  };
+  farmerId: {
+    name: string;
+    email: string;
+  };
+}
+
 interface CartItem {
-  credit: any;
+  credit: CarbonListing; // Changed from 'any' to 'CarbonListing'
   quantity: number;
 }
 
@@ -66,7 +84,7 @@ const CompanyMarketplace = () => {
   const [cartOpen, setCartOpen] = useState(false);
 
   // Backend data states
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<CarbonListing[]>([]); // Changed from 'any[]' to 'CarbonListing[]'
   const [loading, setLoading] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -119,7 +137,7 @@ const CompanyMarketplace = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const addToCart = (credit: any) => {
+  const addToCart = (credit: CarbonListing) => {
     setCart(prev => {
       const existing = prev.find(item => item.credit._id === credit._id);
       if (existing) {
@@ -166,6 +184,23 @@ const CompanyMarketplace = () => {
   };
 
   const hasActiveFilters = searchQuery || priceRange[0] > 0 || priceRange[1] < 50;
+
+  // ✅ Fixed checkout navigation
+  const handleCheckout = () => {
+    if (cart.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Navigate with the first item in cart (or you can handle multiple items differently)
+    const firstItem = cart[0].credit;
+    setCartOpen(false);
+    navigate(`/company/checkout/${firstItem._id}`, { state: { cart } });
+  };
 
   return (
     <DashboardLayout
@@ -275,10 +310,7 @@ const CompanyMarketplace = () => {
                     <Button 
                       className="w-full bg-emerald-600 hover:bg-emerald-700" 
                       size="lg"
-                      onClick={() => {
-                        setCartOpen(false);
-                        navigate(`/company/checkout/${listing._id}`, { state: { cart } });
-                      }}
+                      onClick={handleCheckout}
                     >
                       Proceed to Checkout
                       <ArrowRight className="w-4 h-4 ml-2" />
