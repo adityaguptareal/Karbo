@@ -1,78 +1,210 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "../layout/DashboardLayout";
-import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Progress } from "../ui/progress";
-import { allTransactions, companies } from "@/data/mockData";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { dashboardService } from "@/services/dashboardService";
+import { transactionService } from "@/services/transactionService";
+import { authService } from "@/services/authService";
 import {
   LayoutDashboard,
-  ShoppingBag,
+  ShoppingCart,
   FileText,
   BarChart3,
   Settings,
   Download,
-  TrendingUp,
   Leaf,
-  Globe,
-  Droplets,
-  Wind,
-  Trees,
+  TreePine,
+  Car,
   Factory,
-  Calendar,
+  Lightbulb,
+  TrendingUp,
   Award,
-  CheckCircle,
+  Users,
+  Loader2,
+  AlertCircle,
+  Share2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1]; // c2 - Green Manufacturing Co.
+interface ImpactData {
+  totalPurchases: number;
+  purchasedCredits: number;
+  totalSpent: number;
+  treesEquivalent: number;
+  carsRemoved: number;
+  homesEnergy: number;
+  farmersSupported: number;
+}
 
 const CompanyImpactReport = () => {
-  // Get all purchase transactions for this company
-  const purchases = allTransactions.filter(
-    (t) => t.type === "purchase" && t.companyId === "c2"
-  );
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
 
-  // Calculate metrics
-  const totalCredits = purchases.reduce((sum, p) => sum + (p.credits || 0), 0);
-  const totalCO2Offset = totalCredits; // 1 credit = 1 ton CO2
-  const treesEquivalent = totalCO2Offset * 50;
-  const carsOffRoad = Math.round(totalCO2Offset * 2.5);
-  const homesEnergy = Math.round(totalCO2Offset * 0.8);
+  const [impactData, setImpactData] = useState<ImpactData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Monthly data (example - you can enhance this)
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const monthlyCredits = [450, 520, 680, 750, 820, 680];
+  useEffect(() => {
+    fetchImpactData();
+  }, []);
 
-  // Breakdown by practice type
-  const practiceBreakdown = [
-    { type: "Organic Farming", credits: 850, percentage: 22, color: "bg-emerald-500" },
-    { type: "Agroforestry", credits: 1250, percentage: 32, color: "bg-green-500" },
-    { type: "No-Till Agriculture", credits: 600, percentage: 15, color: "bg-teal-500" },
-    { type: "Stubble Burning Avoidance", credits: 600, percentage: 15, color: "bg-cyan-500" },
-    { type: "Regenerative Grazing", credits: 400, percentage: 10, color: "bg-lime-500" },
-    { type: "Other Practices", credits: 200, percentage: 6, color: "bg-green-400" },
-  ];
+  const fetchImpactData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // SDG Goals alignment
-  const sdgGoals = [
-    { goal: "Climate Action", icon: Globe, progress: 85 },
-    { goal: "Zero Hunger", icon: Leaf, progress: 70 },
-    { goal: "Life on Land", icon: Trees, progress: 78 },
-    { goal: "Clean Water", icon: Droplets, progress: 65 },
+      const response = await dashboardService.getCompanyDashboard();
+      
+      if (response.data) {
+        const { totalPurchases, purchasedCredits, totalSpent } = response.data;
+
+        // Calculate environmental equivalents
+        const treesEquivalent = Math.round(purchasedCredits * 50); // 1 credit = ~50 trees
+        const carsRemoved = Math.round(purchasedCredits / 4.6); // 1 car = ~4.6 tons CO2/year
+        const homesEnergy = Math.round(purchasedCredits / 7.5); // 1 home = ~7.5 tons CO2/year
+        
+        // For farmers supported, we'll fetch from transactions
+        let farmersSupported = 0;
+        try {
+          const transactionResponse = await transactionService.getCompanyTransactions({ limit: 100 });
+          if (transactionResponse.transactions) {
+            const uniqueFarmers = new Set(
+              transactionResponse.transactions.map((t: any) => t.farmerId?._id)
+            );
+            farmersSupported = uniqueFarmers.size;
+          }
+        } catch (err) {
+          console.error('Error fetching farmers:', err);
+        }
+
+        setImpactData({
+          totalPurchases,
+          purchasedCredits,
+          totalSpent,
+          treesEquivalent,
+          carsRemoved,
+          homesEnergy,
+          farmersSupported,
+        });
+      }
+    } catch (err: any) {
+      console.error('Impact data error:', err);
+      const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Failed to load impact data';
+      setError(errorMsg);
+      
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadReport = () => {
+    toast({
+      title: "Generating Report",
+      description: "Your sustainability report is being prepared for download.",
+    });
+    // TODO: Implement PDF generation
+  };
+
+  const handleShareReport = () => {
+    toast({
+      title: "Share Report",
+      description: "Share functionality coming soon!",
+    });
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading impact report...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Unable to Load Report</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchImpactData}>Try Again</Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const impactMetrics = [
+    {
+      icon: TreePine,
+      label: "Trees Planted",
+      value: impactData?.treesEquivalent.toLocaleString() || "0",
+      description: "Equivalent environmental impact",
+      color: "text-green-600 dark:text-green-400",
+      bgColor: "bg-green-100 dark:bg-green-900/20",
+    },
+    {
+      icon: Car,
+      label: "Cars Removed",
+      value: impactData?.carsRemoved.toLocaleString() || "0",
+      description: "From roads annually",
+      color: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-100 dark:bg-blue-900/20",
+    },
+    {
+      icon: Lightbulb,
+      label: "Homes Powered",
+      value: impactData?.homesEnergy.toLocaleString() || "0",
+      description: "Annual energy equivalent",
+      color: "text-yellow-600 dark:text-yellow-400",
+      bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
+    },
+    {
+      icon: Users,
+      label: "Farmers Supported",
+      value: impactData?.farmersSupported.toLocaleString() || "0",
+      description: "Sustainable livelihood created",
+      color: "text-purple-600 dark:text-purple-400",
+      bgColor: "bg-purple-100 dark:bg-purple-900/20",
+    },
   ];
 
   return (
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentCompany.name}
+      userName={currentUser?.name || "Company User"}
     >
       <div className="space-y-6">
         {/* Header */}
@@ -82,276 +214,210 @@ const CompanyImpactReport = () => {
               Environmental Impact Report
             </h1>
             <p className="text-muted-foreground">
-              Comprehensive analysis of your carbon offset initiatives
+              Track your contribution to a sustainable future
             </p>
           </div>
-          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-            <Download className="w-4 h-4" />
-            Download Full Report
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleShareReport}>
+              <Share2 className="w-5 h-5 mr-2" />
+              Share
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={handleDownloadReport}
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Download Report
+            </Button>
+          </div>
         </div>
 
-        {/* Key Impact Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-emerald-200 dark:border-emerald-800">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <Globe className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+        {/* Main Impact Card */}
+        <Card className="border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/10 dark:to-green-900/10">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 rounded-xl">
+                  <Leaf className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Total CO₂ Offset</h2>
+                  <p className="text-muted-foreground">Your carbon neutrality contribution</p>
+                </div>
               </div>
-              <p className="text-3xl font-bold text-foreground mb-1">
-                {totalCO2Offset.toLocaleString()}
+              <Badge className="bg-emerald-600 text-white px-4 py-2 text-lg">
+                Verified
+              </Badge>
+            </div>
+            
+            <div className="text-center py-8">
+              <p className="text-6xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+                {impactData?.purchasedCredits || 0}
               </p>
-              <p className="text-sm text-muted-foreground">Tons CO₂ Offset</p>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
-                +15.3% from last quarter
+              <p className="text-2xl text-muted-foreground">tons of CO₂</p>
+              <p className="text-sm text-muted-foreground mt-4">
+                From {impactData?.totalPurchases || 0} verified transactions
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Trees className="w-6 h-6 text-green-600 dark:text-green-400" />
+        {/* Impact Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {impactMetrics.map((metric) => (
+            <Card key={metric.label} className="border border-border hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-lg ${metric.bgColor}`}>
+                    <metric.icon className={`w-6 h-6 ${metric.color}`} />
+                  </div>
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
                 </div>
-              </div>
-              <p className="text-3xl font-bold text-foreground mb-1">
-                {treesEquivalent.toLocaleString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Trees Planted Equivalent
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Factory className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-foreground mb-1">
-                {carsOffRoad.toLocaleString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Cars Off Road (Annual)
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Wind className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-              <p className="text-3xl font-bold text-foreground mb-1">
-                {homesEnergy.toLocaleString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Homes Energy Saved (Annual)
-              </p>
-            </CardContent>
-          </Card>
+                <h3 className="text-3xl font-bold text-foreground mb-1">
+                  {metric.value}
+                </h3>
+                <p className="text-sm font-medium text-foreground mb-1">
+                  {metric.label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {metric.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Carbon Offset Breakdown */}
-          <Card className="lg:col-span-2">
+        {/* Breakdown Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Investment Breakdown */}
+          <Card className="border border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Carbon Credits by Practice Type
+                <BarChart3 className="w-5 h-5 text-primary" />
+                Investment Breakdown
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {practiceBreakdown.map((practice) => (
-                  <div key={practice.type}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${practice.color}`}
-                        />
-                        <span className="text-sm font-medium">
-                          {practice.type}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">
-                          {practice.credits.toLocaleString()} credits
-                        </span>
-                        <span className="text-sm font-semibold w-12 text-right">
-                          {practice.percentage}%
-                        </span>
-                      </div>
-                    </div>
-                    <Progress value={practice.percentage} className="h-2" />
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total Credits</span>
-                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {totalCredits.toLocaleString()}
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <span className="text-sm font-medium">Total Investment</span>
+                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    ₹{impactData?.totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 }) || '0.00'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <span className="text-sm font-medium">Credits Purchased</span>
+                  <span className="text-lg font-bold">
+                    {impactData?.purchasedCredits || 0} tons
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <span className="text-sm font-medium">Average Price/Credit</span>
+                  <span className="text-lg font-bold">
+                    ₹{impactData?.purchasedCredits 
+                      ? ((impactData.totalSpent || 0) / impactData.purchasedCredits).toFixed(2)
+                      : '0.00'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                  <span className="text-sm font-medium">Transactions</span>
+                  <span className="text-lg font-bold">
+                    {impactData?.totalPurchases || 0}
                   </span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* SDG Alignment */}
-          <Card>
+          {/* Achievements */}
+          <Card className="border border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                UN SDG Alignment
+                <Award className="w-5 h-5 text-primary" />
+                Sustainability Achievements
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-6">
-                Your impact contributes to these Sustainable Development Goals
-              </p>
-              <div className="space-y-6">
-                {sdgGoals.map((sdg) => (
-                  <div key={sdg.goal}>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <sdg.icon className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{sdg.goal}</p>
-                      </div>
-                      <span className="text-sm font-semibold">
-                        {sdg.progress}%
-                      </span>
-                    </div>
-                    <Progress value={sdg.progress} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Compliance Certificate */}
-        <Card className="border-2 border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/50 to-background dark:from-emerald-950/20">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground mb-2">
-                  Carbon Neutral Certified
-                </h3>
-                <p className="text-muted-foreground mb-4">
-                  Your organization has successfully offset{" "}
-                  {totalCO2Offset.toLocaleString()} tons of CO₂ through
-                  verified carbon credits, contributing to global climate action
-                  and sustainable development.
-                </p>
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>Valid: Jan 2024 - Dec 2024</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-muted-foreground" />
-                    <span>Certificate ID: #CC-2024-{currentCompany.id.toUpperCase()}</span>
-                  </div>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 rounded-full">
+                  <Leaf className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Carbon Neutral Contributor</p>
+                  <p className="text-xs text-muted-foreground">Offset {impactData?.purchasedCredits}+ tons CO₂</p>
                 </div>
               </div>
-              <Button variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                Download Certificate
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Additional Impact Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Droplets className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                  <Users className="w-5 h-5 text-blue-600" />
                 </div>
-                <h3 className="font-semibold">Water Saved</h3>
+                <div>
+                  <p className="font-semibold text-foreground">Community Supporter</p>
+                  <p className="text-xs text-muted-foreground">Supporting {impactData?.farmersSupported} farmers</p>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {(totalCO2Offset * 15000).toLocaleString()}
-              </p>
-              <p className="text-sm text-muted-foreground">Liters annually</p>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                  <Factory className="w-5 h-5 text-purple-600" />
                 </div>
-                <h3 className="font-semibold">Biodiversity</h3>
-              </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {Math.round(totalCO2Offset * 0.5).toLocaleString()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Hectares protected
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Factory className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <div>
+                  <p className="font-semibold text-foreground">Sustainable Business</p>
+                  <p className="text-xs text-muted-foreground">ESG compliance active</p>
                 </div>
-                <h3 className="font-semibold">Farmers Supported</h3>
               </div>
-              <p className="text-2xl font-bold text-foreground mb-1">
-                {purchases.length}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Direct partnerships
-              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Call to Action */}
-        <Card className="bg-primary text-primary-foreground">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-bold mb-2">
-                  Continue Your Climate Journey
-                </h3>
-                <p className="text-primary-foreground/80">
-                  Offset more carbon and increase your environmental impact
+        {impactData && impactData.purchasedCredits === 0 && (
+          <Card className="border border-dashed border-border">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Leaf className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Start Your Impact Journey</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-md">
+                Purchase carbon credits to offset your emissions and support sustainable farming practices.
+              </p>
+              <Button
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => navigate('/company/marketplace')}
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Browse Marketplace
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Comparison Info */}
+        <Card className="border border-border bg-muted/50">
+          <CardContent className="p-6">
+            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-yellow-600" />
+              Understanding Your Impact
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="p-4 bg-background rounded-lg">
+                <p className="font-medium text-foreground mb-2">🌳 Trees Planted</p>
+                <p className="text-muted-foreground">
+                  One carbon credit offsets approximately 50 trees' annual carbon absorption capacity.
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                size="lg"
-                className="gap-2"
-                asChild
-              >
-                <Link to="/marketplace">
-                  Browse Carbon Credits
-                  <TrendingUp className="w-4 h-4" />
-                </Link>
-              </Button>
+              <div className="p-4 bg-background rounded-lg">
+                <p className="font-medium text-foreground mb-2">🚗 Cars Removed</p>
+                <p className="text-muted-foreground">
+                  Average car produces ~4.6 tons of CO₂ per year. Your credits equal removing cars from roads.
+                </p>
+              </div>
+              <div className="p-4 bg-background rounded-lg">
+                <p className="font-medium text-foreground mb-2">⚡ Homes Powered</p>
+                <p className="text-muted-foreground">
+                  Average home produces ~7.5 tons of CO₂ annually from energy consumption.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

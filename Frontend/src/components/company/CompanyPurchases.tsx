@@ -1,342 +1,354 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "../layout/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
-import { allTransactions, carbonCredits, farmers, companies } from "@/data/mockData";
+import { transactionService } from "@/services/transactionService";
+import { authService } from "@/services/authService";
 import {
   LayoutDashboard,
-  ShoppingBag,
+  ShoppingCart,
   FileText,
   BarChart3,
   Settings,
   Download,
-  Search,
-  Filter,
   Calendar,
-  MapPin,
   Leaf,
+  MapPin,
+  Search,
+  Loader2,
+  AlertCircle,
+  Receipt,
   ExternalLink,
-  FileCheck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingBag },
+  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1];
+interface Transaction {
+  _id: string;
+  companyId: any;
+  farmerId: any;
+  carbonCreditListingId: any;
+  creditsPurchased: number;
+  amountPaid: number;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  invoiceUrl?: string;
+  createdAt: string;
+}
 
 const CompanyPurchases = () => {
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterType, setFilterType] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Get all purchase transactions
-  const purchases = allTransactions
-    .filter((t) => t.type === "purchase" && t.companyId === currentCompany.id)
-    .map((purchase) => {
-      const credit = carbonCredits.find((c) => c.id === purchase.creditId);
-      const farmer = credit ? farmers.find((f) => f.id === credit.farmerId) : null;
-      return {
-        ...purchase,
-        credit,
-        farmer,
-      };
-    });
+  // Fetch transactions
+  useEffect(() => {
+    fetchTransactions();
+  }, [currentPage]);
 
-  // Filter purchases
-  const filteredPurchases = purchases.filter((purchase) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      purchase.farmer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      purchase.credit?.practiceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      purchase.id.toLowerCase().includes(searchQuery.toLowerCase());
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const matchesStatus =
-      filterStatus === "all" || purchase.status === filterStatus;
+      const response = await transactionService.getCompanyTransactions({
+        page: currentPage,
+        limit: 10,
+        sortBy: 'newest'
+      });
 
-    const matchesType =
-      filterType === "all" || purchase.credit?.practiceType === filterType;
-
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
-  // Calculate totals
-  const totalPurchases = purchases?.length || 0;
-  const totalCredits = purchases?.reduce((sum, p) => sum + (p.credits || 0), 0) || 0;
-  const totalSpent = purchases?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-  const totalCO2 = purchases?.reduce((sum, p) => sum + ((p.credits || 0) * 1), 0) || 0;
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: string; label: string }> = {
-      completed: { variant: "default", label: "Completed" },
-      pending: { variant: "secondary", label: "Pending" },
-      verified: { variant: "default", label: "Verified" },
-    };
-
-    const config = variants[status] || variants.completed;
-    return (
-      <Badge
-        variant={config.variant as any}
-        className={
-          status === "completed"
-            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-            : ""
-        }
-      >
-        {config.label}
-      </Badge>
-    );
+      if (response.transactions) {
+        setTransactions(response.transactions);
+        setTotalPages(response.pages || 1);
+      }
+    } catch (err: any) {
+      console.error('Fetch transactions error:', err);
+      const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Failed to load purchases';
+      setError(errorMsg);
+      
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Filter transactions by search
+  const filteredTransactions = transactions.filter(transaction => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      transaction.farmerId?.name?.toLowerCase().includes(searchLower) ||
+      transaction.carbonCreditListingId?.farmlandId?.landName?.toLowerCase().includes(searchLower) ||
+      transaction.razorpayPaymentId?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Download invoice
+  const handleDownloadInvoice = async (transactionId: string, paymentId: string) => {
+    try {
+      toast({
+        title: "Downloading...",
+        description: "Your invoice is being prepared.",
+      });
+
+      const blob = await transactionService.downloadInvoice(transactionId);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice_${paymentId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Invoice downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to download invoice. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  // Loading state
+  if (loading && transactions.length === 0) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading your purchases...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error && transactions.length === 0) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Unable to Load Purchases</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchTransactions}>Try Again</Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout navItems={navItems} userType="company" userName="EcoTech Industries">
+    <DashboardLayout
+      navItems={navItems}
+      userType="company"
+      userName={currentUser?.name || "Company User"}
+    >
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">My Purchases</h1>
-          <p className="text-muted-foreground">
-            View and manage your carbon credit purchase history
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              My Purchases
+            </h1>
+            <p className="text-muted-foreground">
+              View and manage your carbon credit transactions
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/company/marketplace')}
+          >
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            Browse More Credits
+          </Button>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{totalPurchases}</p>
-                <p className="text-sm text-muted-foreground">Total Purchases</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {totalCredits.toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground">Credits Purchased</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <FileCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">
-                  ₹{(totalSpent / 1000).toFixed(1)}K
-                </p>
-                <p className="text-sm text-muted-foreground">Total Invested</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {totalCO2.toLocaleString()}
-                </p>
-                <p className="text-sm text-muted-foreground">Tons CO₂ Offset</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-card border border-border rounded-xl p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        {/* Search */}
+        <Card className="border border-border">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Search by farmer, type, or transaction ID..."
+                placeholder="Search by farmer, land name, or transaction ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Status Filter */}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Type Filter */}
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Credit Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Organic Farming">Organic Farming</SelectItem>
-                <SelectItem value="No-Till Agriculture">No-Till Agriculture</SelectItem>
-                <SelectItem value="Agroforestry">Agroforestry</SelectItem>
-                <SelectItem value="Regenerative">Regenerative</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Download All Button */}
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export All
-            </Button>
-          </div>
-        </div>
-
-        {/* Purchases Table */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Transaction ID</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Farmer</TableHead>
-                  <TableHead>Credit Type</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPurchases.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <ShoppingBag className="w-12 h-12 text-muted-foreground/50" />
-                        <p className="text-muted-foreground">No purchases found</p>
-                        <Button variant="outline" size="sm" asChild className="mt-2">
-                          <Link to="/marketplace">Browse Marketplace</Link>
-                        </Button>
+        {/* Transactions List */}
+        {filteredTransactions.length === 0 ? (
+          <Card className="border border-dashed border-border">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Receipt className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                {searchQuery ? 'No matching purchases' : 'No purchases yet'}
+              </h3>
+              <p className="text-muted-foreground text-center mb-6">
+                {searchQuery 
+                  ? 'Try adjusting your search query' 
+                  : 'Start purchasing carbon credits to see your transaction history here'}
+              </p>
+              {!searchQuery && (
+                <Button
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => navigate('/company/marketplace')}
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Browse Marketplace
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredTransactions.map((transaction) => (
+              <Card key={transaction._id} className="border border-border hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                    {/* Transaction Info */}
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg text-foreground">
+                            {transaction.carbonCreditListingId?.farmlandId?.landName || 'Carbon Credit Purchase'}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            From: {transaction.farmerId?.name || 'Unknown Farmer'}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                          Completed
+                        </Badge>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredPurchases.map((purchase) => (
-                    <TableRow key={purchase.id} className="hover:bg-muted/30">
-                      <TableCell className="font-mono text-sm">
-                        #{purchase.id.slice(0, 8)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {new Date(purchase.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={purchase.farmer?.avatar}
-                            alt={purchase.farmer?.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                          <span className="font-medium">
-                            {purchase.farmer?.name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="text-sm">{purchase.credit?.practiceType}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <MapPin className="w-4 h-4" />
-                          {purchase.credit?.location}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {purchase.credits?.toLocaleString() || 0} credits
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        ₹{purchase.amount.toLocaleString()}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(purchase.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Report
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
 
-        {/* Results Count */}
-        {filteredPurchases.length > 0 && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
-            <p>
-              Showing {filteredPurchases.length} of {totalPurchases} purchases
-            </p>
-            <p>Total: ₹{totalSpent.toLocaleString()}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="flex items-center gap-2">
+                          <Leaf className="w-4 h-4 text-emerald-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Credits</p>
+                            <p className="font-medium">{transaction.creditsPurchased} tons CO₂</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Date</p>
+                            <p className="font-medium">{formatDate(transaction.createdAt)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Receipt className="w-4 h-4 text-purple-600" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Amount</p>
+                            <p className="font-medium">₹{transaction.amountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-xs text-muted-foreground">
+                          Transaction ID: <span className="font-mono">{transaction.razorpayPaymentId}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex lg:flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadInvoice(transaction._id, transaction.razorpayPaymentId)}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Invoice
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/company/purchases/${transaction._id}`)}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Details
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || loading}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || loading}
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>

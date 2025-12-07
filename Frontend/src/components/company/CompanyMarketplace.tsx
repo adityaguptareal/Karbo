@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "../layout/DashboardLayout";
 import { CreditCard } from "../shared/CreditCard";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Slider } from "../ui/slider";
-import { carbonCredits, CarbonCredit, companies } from "@/data/mockData";
+import { marketplaceService } from "@/services/marketplaceService";
 import {
   Select,
   SelectContent,
@@ -34,11 +34,15 @@ import {
   FileText,
   BarChart3,
   Settings,
+  ArrowRight,
+  Loader2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { authService } from "@/services/authService";
 
 interface CartItem {
-  credit: CarbonCredit;
+  credit: any;
   quantity: number;
 }
 
@@ -50,61 +54,78 @@ const navItems = [
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1]; // c2 - Green Manufacturing Co.
-
 const CompanyMarketplace = () => {
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [priceRange, setPriceRange] = useState([0, 50]);
-  const [selectedPractices, setSelectedPractices] = useState<string[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const practices = [...new Set(carbonCredits.map(c => c.practiceType))];
-  const countries = [...new Set(carbonCredits.map(c => c.country))];
+  // Backend data states
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalListings, setTotalListings] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredCredits = useMemo(() => {
-    let filtered = carbonCredits.filter(credit => {
-      const matchesSearch = 
-        credit.farmName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        credit.farmerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        credit.practiceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        credit.location.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch listings from backend
+  const fetchListings = async () => {
+    try {
+      setLoading(true);
       
-      const matchesPrice = credit.pricePerCredit >= priceRange[0] && credit.pricePerCredit <= priceRange[1];
-      const matchesPractice = selectedPractices.length === 0 || selectedPractices.includes(credit.practiceType);
-      const matchesCountry = selectedCountries.length === 0 || selectedCountries.includes(credit.country);
-      
-      return matchesSearch && matchesPrice && matchesPractice && matchesCountry;
-    });
+      const filters = {
+        search: searchQuery || undefined,
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1],
+        sort: sortBy === 'newest' ? 'newest' : 
+              sortBy === 'price-low' ? 'price_low' : 
+              sortBy === 'price-high' ? 'price_high' : 'newest',
+        page: currentPage,
+        limit: 20
+      };
 
-    // Sort
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => a.pricePerCredit - b.pricePerCredit);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.pricePerCredit - a.pricePerCredit);
-        break;
-      case 'credits':
-        filtered.sort((a, b) => b.credits - a.credits);
-        break;
-      default:
-        break;
+      const response = await marketplaceService.getListings(filters);
+      
+      setListings(response.listings || []);
+      setTotalListings(response.total || 0);
+      setTotalPages(response.pages || 1);
+    } catch (error: any) {
+      console.error('Error fetching listings:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.msg || "Failed to fetch listings",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return filtered;
-  }, [searchQuery, priceRange, selectedPractices, selectedCountries, sortBy]);
+  // Fetch on mount and when filters change
+  useEffect(() => {
+    fetchListings();
+  }, [searchQuery, priceRange, sortBy, currentPage]);
 
-  const addToCart = (credit: CarbonCredit) => {
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage !== 1) setCurrentPage(1);
+      else fetchListings();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const addToCart = (credit: any) => {
     setCart(prev => {
-      const existing = prev.find(item => item.credit.id === credit.id);
+      const existing = prev.find(item => item.credit._id === credit._id);
       if (existing) {
         return prev.map(item =>
-          item.credit.id === credit.id
-            ? { ...item, quantity: Math.min(item.quantity + 1, credit.credits) }
+          item.credit._id === credit._id
+            ? { ...item, quantity: Math.min(item.quantity + 1, credit.totalCredits) }
             : item
         );
       }
@@ -112,12 +133,12 @@ const CompanyMarketplace = () => {
     });
     toast({
       title: "Added to cart",
-      description: `${credit.farmName} credit added to your cart.`,
+      description: `${credit.farmlandId?.landName || 'Credit'} added to your cart.`,
     });
   };
 
   const removeFromCart = (creditId: string) => {
-    setCart(prev => prev.filter(item => item.credit.id !== creditId));
+    setCart(prev => prev.filter(item => item.credit._id !== creditId));
   };
 
   const updateQuantity = (creditId: string, quantity: number) => {
@@ -127,8 +148,8 @@ const CompanyMarketplace = () => {
     }
     setCart(prev =>
       prev.map(item =>
-        item.credit.id === creditId
-          ? { ...item, quantity: Math.min(quantity, item.credit.credits) }
+        item.credit._id === creditId
+          ? { ...item, quantity: Math.min(quantity, item.credit.totalCredits) }
           : item
       )
     );
@@ -137,37 +158,20 @@ const CompanyMarketplace = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.credit.pricePerCredit * item.quantity, 0);
   const cartCredits = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const togglePractice = (practice: string) => {
-    setSelectedPractices(prev =>
-      prev.includes(practice)
-        ? prev.filter(p => p !== practice)
-        : [...prev, practice]
-    );
-  };
-
-  const toggleCountry = (country: string) => {
-    setSelectedCountries(prev =>
-      prev.includes(country)
-        ? prev.filter(c => c !== country)
-        : [...prev, country]
-    );
-  };
-
   const clearFilters = () => {
     setSearchQuery("");
     setPriceRange([0, 50]);
-    setSelectedPractices([]);
-    setSelectedCountries([]);
     setSortBy("newest");
+    setCurrentPage(1);
   };
 
-  const hasActiveFilters = searchQuery || selectedPractices.length > 0 || selectedCountries.length > 0 || priceRange[0] > 0 || priceRange[1] < 50;
+  const hasActiveFilters = searchQuery || priceRange[0] > 0 || priceRange[1] < 50;
 
   return (
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentCompany.name}
+      userName={currentUser?.name || "Company User"}
     >
       <div className="space-y-6">
         {/* Header */}
@@ -177,7 +181,7 @@ const CompanyMarketplace = () => {
               Carbon Credit Marketplace
             </h1>
             <p className="text-muted-foreground">
-              Browse {carbonCredits.length} verified credits from sustainable farms worldwide
+              Browse {totalListings} verified credits from sustainable farms worldwide
             </p>
           </div>
           
@@ -211,21 +215,20 @@ const CompanyMarketplace = () => {
               ) : (
                 <div className="mt-6 space-y-4">
                   {cart.map(item => (
-                    <div key={item.credit.id} className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-                      <img 
-                        src={item.credit.image} 
-                        alt={item.credit.farmName}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
+                    <div key={item.credit._id} className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{item.credit.farmName}</p>
-                        <p className="text-sm text-muted-foreground">₹{item.credit.pricePerCredit}/credit</p>
+                        <p className="font-medium text-foreground truncate">
+                          {item.credit.farmlandId?.landName || 'Carbon Credit'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          ₹{item.credit.pricePerCredit}/credit
+                        </p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button 
                             variant="outline" 
                             size="icon" 
                             className="h-8 w-8"
-                            onClick={() => updateQuantity(item.credit.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.credit._id, item.quantity - 1)}
                           >
                             -
                           </Button>
@@ -234,7 +237,7 @@ const CompanyMarketplace = () => {
                             variant="outline" 
                             size="icon" 
                             className="h-8 w-8"
-                            onClick={() => updateQuantity(item.credit.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.credit._id, item.quantity + 1)}
                           >
                             +
                           </Button>
@@ -248,7 +251,7 @@ const CompanyMarketplace = () => {
                           variant="ghost" 
                           size="icon"
                           className="h-8 w-8 text-destructive"
-                          onClick={() => removeFromCart(item.credit.id)}
+                          onClick={() => removeFromCart(item.credit._id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -269,8 +272,16 @@ const CompanyMarketplace = () => {
                       <span>Total</span>
                       <span className="text-emerald-600 dark:text-emerald-400">₹{cartTotal.toFixed(2)}</span>
                     </div>
-                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700" size="lg">
+                    <Button 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700" 
+                      size="lg"
+                      onClick={() => {
+                        setCartOpen(false);
+                        navigate('/company/checkout', { state: { cart } });
+                      }}
+                    >
                       Proceed to Checkout
+                      <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
                 </div>
@@ -301,7 +312,7 @@ const CompanyMarketplace = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input 
-                    placeholder="Farm, farmer, practice..."
+                    placeholder="Search credits..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -322,47 +333,6 @@ const CompanyMarketplace = () => {
                   className="mt-3"
                 />
               </div>
-
-              {/* Practice Types */}
-              <div className="mb-6">
-                <label className="text-sm font-medium text-foreground mb-3 block">Practice Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {practices.map(practice => (
-                    <Badge
-                      key={practice}
-                      variant={selectedPractices.includes(practice) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => togglePractice(practice)}
-                    >
-                      {practice}
-                      {selectedPractices.includes(practice) && (
-                        <X className="w-3 h-3 ml-1" />
-                      )}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Countries */}
-              <div>
-                <label className="text-sm font-medium text-foreground mb-3 block">Location</label>
-                <div className="flex flex-wrap gap-2">
-                  {countries.map(country => (
-                    <Badge
-                      key={country}
-                      variant={selectedCountries.includes(country) ? "default" : "outline"}
-                      className="cursor-pointer"
-                      onClick={() => toggleCountry(country)}
-                    >
-                      <MapPin className="w-3 h-3 mr-1" />
-                      {country}
-                      {selectedCountries.includes(country) && (
-                        <X className="w-3 h-3 ml-1" />
-                      )}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
             </div>
           </aside>
 
@@ -371,7 +341,7 @@ const CompanyMarketplace = () => {
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-muted-foreground">
-                Showing {filteredCredits.length} of {carbonCredits.length} credits
+                Showing {listings.length} of {totalListings} credits
               </p>
               <div className="flex items-center gap-4">
                 <Select value={sortBy} onValueChange={setSortBy}>
@@ -382,7 +352,6 @@ const CompanyMarketplace = () => {
                     <SelectItem value="newest">Newest</SelectItem>
                     <SelectItem value="price-low">Price: Low to High</SelectItem>
                     <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="credits">Most Credits</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex items-center border border-border rounded-lg overflow-hidden">
@@ -404,8 +373,13 @@ const CompanyMarketplace = () => {
               </div>
             </div>
 
-            {/* Credits */}
-            {filteredCredits.length === 0 ? (
+            {/* Loading State */}
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground">Loading listings...</span>
+              </div>
+            ) : listings.length === 0 ? (
               <div className="text-center py-16 bg-card rounded-xl border border-border">
                 <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">No credits found</h3>
@@ -413,19 +387,44 @@ const CompanyMarketplace = () => {
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               </div>
             ) : (
-              <div className={viewMode === 'grid' 
-                ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" 
-                : "space-y-4"
-              }>
-                {filteredCredits.map(credit => (
-                  <CreditCard 
-                    key={credit.id} 
-                    credit={credit} 
-                    viewMode={viewMode}
-                    onAddToCart={addToCart}
-                  />
-                ))}
-              </div>
+              <>
+                <div className={viewMode === 'grid' 
+                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" 
+                  : "space-y-4"
+                }>
+                  {listings.map(credit => (
+                    <CreditCard 
+                      key={credit._id} 
+                      credit={credit} 
+                      viewMode={viewMode}
+                      onAddToCart={addToCart}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </main>
         </div>

@@ -1,209 +1,347 @@
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import CompanyPurchases from "@/components/company/CompanyPurchases";
-import { StatsCard } from "@/components/shared/StatsCard";
-import { CreditCard } from "@/components/shared/CreditCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { companies, carbonCredits, transactions } from "@/data/mockData";
+import { Badge } from "@/components/ui/badge";
+import { dashboardService } from "@/services/dashboardService";
+import { authService } from "@/services/authService";
 import {
   LayoutDashboard,
-  ShoppingBag,
+  ShoppingCart,
   FileText,
   BarChart3,
   Settings,
-  Leaf,
-  Globe,
-  DollarSign,
   TrendingUp,
-  Download,
-  ArrowRight,
+  Leaf,
+  DollarSign,
+  Package,
+  Activity,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingBag },
+  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1];
+interface DashboardData {
+  totalPurchases: number;
+  purchasedCredits: number;
+  totalSpent: number;
+}
 
 const CompanyDashboard = () => {
-  const recentCredits = carbonCredits.slice(0, 3);
-  const recentPurchases = transactions.filter(t => t.type === 'purchase').slice(0, 3);
-  
-  // Sustainability goal progress (example)
-  const sustainabilityGoal = 10000; // tons CO2
-  const currentOffset = currentCompany.co2Offset;
-  const goalProgress = (currentOffset / sustainabilityGoal) * 100;
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await dashboardService.getCompanyDashboard();
+      
+      if (response.data) {
+        setDashboardData(response.data);
+      }
+    } catch (err: any) {
+      console.error('Dashboard fetch error:', err);
+      const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Failed to load dashboard data';
+      setError(errorMsg);
+      
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={currentUser?.name || "Company User"}
+      >
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center max-w-md">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchDashboardData}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const stats = [
+    {
+      title: "Total Purchases",
+      value: dashboardData?.totalPurchases || 0,
+      icon: Package,
+      color: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-100 dark:bg-blue-900/20",
+      description: "Carbon credit transactions",
+    },
+    {
+      title: "Carbon Credits Owned",
+      value: `${dashboardData?.purchasedCredits || 0}`,
+      icon: Leaf,
+      color: "text-emerald-600 dark:text-emerald-400",
+      bgColor: "bg-emerald-100 dark:bg-emerald-900/20",
+      description: "Total credits purchased",
+    },
+    {
+      title: "Total Investment",
+      value: `₹${(dashboardData?.totalSpent || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: DollarSign,
+      color: "text-purple-600 dark:text-purple-400",
+      bgColor: "bg-purple-100 dark:bg-purple-900/20",
+      description: "Amount spent on credits",
+    },
+    {
+      title: "CO₂ Offset",
+      value: `${dashboardData?.purchasedCredits || 0} tons`,
+      icon: Activity,
+      color: "text-orange-600 dark:text-orange-400",
+      bgColor: "bg-orange-100 dark:bg-orange-900/20",
+      description: "Environmental impact",
+    },
+  ];
 
   return (
-    <DashboardLayout navItems={navItems} userType="company" userName={currentCompany.name}>
-      <div className="space-y-8">
+    <DashboardLayout
+      navItems={navItems}
+      userType="company"
+      userName={currentUser?.name || "Company User"}
+    >
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Company Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Track your carbon offset progress and browse new credits
+              Welcome back! Here's your sustainability overview.
             </p>
           </div>
-          <Button variant="hero" asChild>
-            <Link to="/company/marketplace">
-              <ShoppingBag className="w-4 h-4 mr-2" />
-              Browse Marketplace
-            </Link>
+          <Button
+            size="lg"
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => navigate('/company/marketplace')}
+          >
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            Browse Marketplace
           </Button>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="CO₂ Offset"
-            value={`₹${(currentCompany.co2Offset / 1000).toFixed(1)}K`}
-            subtitle="Tons offset"
-            icon={Globe}
-            variant="primary"
-            trend={{ value: 15.3, isPositive: true }}
-          />
-          <StatsCard
-            title="Credits Purchased"
-            value={currentCompany.totalPurchased.toLocaleString()}
-            subtitle="Total credits"
-            icon={Leaf}
-            variant="secondary"
-          />
-          <StatsCard
-            title="Total Investment"
-            value={`₹${(currentCompany.totalSpent / 1000).toFixed(0)}K`}
-            subtitle="In carbon credits"
-            icon={DollarSign}
-          />
-          <StatsCard
-            title="Trees Equivalent"
-            value={(currentCompany.co2Offset * 50).toLocaleString()}
-            subtitle="Trees planted equiv."
-            icon={TrendingUp}
-            variant="accent"
-          />
+          {stats.map((stat) => (
+            <Card key={stat.title} className="border border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.title}
+                </CardTitle>
+                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground mb-1">
+                  {stat.value}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stat.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sustainability Goal */}
-          <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="font-semibold text-lg text-foreground">Sustainability Goal 2024</h2>
-                <p className="text-sm text-muted-foreground">Annual carbon offset target</p>
-              </div>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Download Report
-              </Button>
-            </div>
-            
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl mb-6">
-              <div className="flex items-end justify-between mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Progress</p>
-                  <p className="text-4xl font-bold text-foreground">
-                    {currentOffset.toLocaleString()}
-                    <span className="text-lg font-normal text-muted-foreground"> / {sustainabilityGoal.toLocaleString()} tons</span>
+        {/* Quick Actions */}
+        <Card className="border border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-start gap-2"
+                onClick={() => navigate('/company/marketplace')}
+              >
+                <ShoppingCart className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold">Browse Credits</p>
+                  <p className="text-xs text-muted-foreground">
+                    Explore verified carbon credits
                   </p>
                 </div>
-                <p className="text-2xl font-bold text-primary">{goalProgress.toFixed(0)}%</p>
-              </div>
-              <Progress value={goalProgress} className="h-3" />
-              <p className="text-sm text-muted-foreground mt-3">
-                {sustainabilityGoal - currentOffset > 0 
-                  ? `${(sustainabilityGoal - currentOffset).toLocaleString()} tons remaining to reach your goal`
-                  : "Congratulations! You've reached your goal!"
-                }
-              </p>
-            </div>
+              </Button>
 
-            {/* Impact Metrics */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">{currentCompany.co2Offset}</p>
-                <p className="text-sm text-muted-foreground">Tons CO₂ Offset</p>
-              </div>
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">{Math.round(currentCompany.co2Offset * 2.5)}</p>
-                <p className="text-sm text-muted-foreground">Cars Off Road (equiv.)</p>
-              </div>
-              <div className="text-center p-4 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">{Math.round(currentCompany.co2Offset * 50)}</p>
-                <p className="text-sm text-muted-foreground">Trees Planted (equiv.)</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="space-y-6">
-            <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <Button variant="default" className="w-full justify-between" asChild>
-                  <Link to="/company/marketplace">
-                    Browse Credits
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-between" asChild>
-                  <Link to="/company/purchases">
-                    View Purchases
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-between" asChild>
-                  <Link to="/company/impact">
-                    Impact Report
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            {/* Compliance Status */}
-            <div className="bg-success/10 rounded-xl border border-success/20 p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-success flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-success-foreground" />
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-start gap-2"
+                onClick={() => navigate('/company/purchases')}
+              >
+                <FileText className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold">View Purchases</p>
+                  <p className="text-xs text-muted-foreground">
+                    See transaction history
+                  </p>
                 </div>
+              </Button>
+
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col items-start gap-2"
+                onClick={() => navigate('/company/impact')}
+              >
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <div className="text-left">
+                  <p className="font-semibold">Impact Report</p>
+                  <p className="text-xs text-muted-foreground">
+                    View sustainability metrics
+                  </p>
+                </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Impact Overview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                Environmental Impact
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg">
                 <div>
-                  <p className="font-semibold text-foreground">Compliance Status</p>
-                  <p className="text-sm text-success">On Track</p>
+                  <p className="text-sm text-muted-foreground">CO₂ Offset</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {dashboardData?.purchasedCredits || 0} tons
+                  </p>
                 </div>
+                <Activity className="w-12 h-12 text-emerald-600 dark:text-emerald-400 opacity-20" />
               </div>
               <p className="text-sm text-muted-foreground">
-                You're on track to meet your 2024 sustainability compliance requirements.
+                Your carbon offset is equivalent to planting approximately{" "}
+                <span className="font-semibold text-foreground">
+                  {((dashboardData?.purchasedCredits || 0) * 50).toLocaleString()}
+                </span>{" "}
+                trees or removing{" "}
+                <span className="font-semibold text-foreground">
+                  {Math.round((dashboardData?.purchasedCredits || 0) / 4.6)}
+                </span>{" "}
+                cars from the road for a year.
               </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-blue-600" />
+                Purchase Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Transactions</span>
+                  <span className="font-semibold">{dashboardData?.totalPurchases || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Average per Transaction</span>
+                  <span className="font-semibold">
+                    ₹{dashboardData?.totalPurchases 
+                      ? ((dashboardData.totalSpent || 0) / dashboardData.totalPurchases).toFixed(2)
+                      : '0.00'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Credits per Transaction</span>
+                  <span className="font-semibold">
+                    {dashboardData?.totalPurchases
+                      ? Math.round((dashboardData.purchasedCredits || 0) / dashboardData.totalPurchases)
+                      : 0}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Featured Credits */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="font-semibold text-lg text-foreground">Featured Credits</h2>
-              <p className="text-sm text-muted-foreground">Hand-picked credits matching your sustainability goals</p>
-            </div>
-            <Button variant="ghost" asChild>
-              <Link to="/company/marketplace">View All <ArrowRight className="w-4 h-4 ml-2" /></Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recentCredits.map(credit => (
-              <CreditCard key={credit.id} credit={credit} viewMode="grid" />
-            ))}
-          </div>
-        </div>
+        {/* No Data Message */}
+        {dashboardData?.totalPurchases === 0 && (
+          <Card className="border border-dashed border-border">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No Purchases Yet</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-md">
+                Start making an impact by purchasing verified carbon credits from sustainable farms.
+              </p>
+              <Button
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => navigate('/company/marketplace')}
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Browse Marketplace
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
