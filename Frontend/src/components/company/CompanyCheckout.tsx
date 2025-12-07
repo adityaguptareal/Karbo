@@ -136,97 +136,143 @@ const CompanyCheckout = () => {
   };
 
 
-  const handlePayment = async () => {
-    if (!listing) return;
+  // const handlePayment = async () => {
+  //   if (!listing) return;
 
-    try {
-      setProcessing(true);
+  //   try {
+  //     setProcessing(true);
 
-      // Step 1: Create Razorpay order
-      const orderData = await paymentService.createOrder(
-        listing.totalValue,
-        listing._id
-      );
+  //     // Step 1: Create Razorpay order
+  //     const orderData = await paymentService.createOrder(
+  //       listing.totalValue,
+  //       listing._id
+  //     );
 
-      if (!orderData.success || !orderData.order) {
-        throw new Error('Failed to create payment order');
-      }
+  //     if (!orderData.success || !orderData.order) {
+  //       throw new Error('Failed to create payment order');
+  //     }
 
-      // Step 2: Initialize Razorpay checkout
-      const options = {
-        key: RAZORPAY_KEY,
-        amount: orderData.order.amount,
-        currency: orderData.order.currency,
-        name: "Karbo - Carbon Credits",
-        description: `Purchase ${listing.totalCredits} Carbon Credits`,
-        order_id: orderData.order.id,
-        handler: async function (response: any) {
-          try {
-            // Step 3: Verify payment on backend
-            const verificationData = {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              listingId: listing._id
-            };
+  //     // Step 2: Initialize Razorpay checkout
+  //     const options = {
+  //       key: RAZORPAY_KEY,
+  //       amount: orderData.order.amount,
+  //       currency: orderData.order.currency,
+  //       name: "Karbo - Carbon Credits",
+  //       description: `Purchase ${listing.totalCredits} Carbon Credits`,
+  //       order_id: orderData.order.id,
+  //       handler: async function (response: any) {
+  //         try {
+  //           // Step 3: Verify payment on backend
+  //           const verificationData = {
+  //             razorpay_payment_id: response.razorpay_payment_id,
+  //             razorpay_order_id: response.razorpay_order_id,
+  //             razorpay_signature: response.razorpay_signature,
+  //             listingId: listing._id
+  //           };
 
-            const verifyResult = await paymentService.verifyPayment(verificationData);
+  //           const verifyResult = await paymentService.verifyPayment(verificationData);
 
-            if (verifyResult.success) {
-              toast({
-                title: "Payment Successful! 🎉",
-                description: "Your carbon credits have been purchased successfully.",
-              });
+  //           if (verifyResult.success) {
+  //             toast({
+  //               title: "Payment Successful! 🎉",
+  //               description: "Your carbon credits have been purchased successfully.",
+  //             });
 
-              // Redirect to purchases page
-              setTimeout(() => {
-                navigate('/company/purchases');
-              }, 2000);
-            } else {
-              throw new Error('Payment verification failed');
-            }
-          } catch (error: any) {
-            console.error('Verification error:', error);
-            toast({
-              title: "Verification Failed",
-              description: error.response?.data?.message || "Please contact support",
-              variant: "destructive"
-            });
-          } finally {
-            setProcessing(false);
-          }
-        },
-        prefill: {
-          name: currentUser?.name || "",
-          email: currentUser?.email || "",
-        },
-        theme: {
-          color: "#10b981" // Emerald color
-        },
-        modal: {
-          ondismiss: function() {
-            setProcessing(false);
-            toast({
-              title: "Payment Cancelled",
-              description: "You cancelled the payment process",
-            });
-          }
-        }
-      };
+  //             // Redirect to purchases page
+  //             setTimeout(() => {
+  //               navigate('/company/purchases');
+  //             }, 2000);
+  //           } else {
+  //             throw new Error('Payment verification failed');
+  //           }
+  //         } catch (error: any) {
+  //           console.error('Verification error:', error);
+  //           toast({
+  //             title: "Verification Failed",
+  //             description: error.response?.data?.message || "Please contact support",
+  //             variant: "destructive"
+  //           });
+  //         } finally {
+  //           setProcessing(false);
+  //         }
+  //       },
+  //       prefill: {
+  //         name: currentUser?.name || "",
+  //         email: currentUser?.email || "",
+  //       },
+  //       theme: {
+  //         color: "#10b981" // Emerald color
+  //       },
+  //       modal: {
+  //         ondismiss: function() {
+  //           setProcessing(false);
+  //           toast({
+  //             title: "Payment Cancelled",
+  //             description: "You cancelled the payment process",
+  //           });
+  //         }
+  //       }
+  //     };
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+  //     const razorpay = new window.Razorpay(options);
+  //     razorpay.open();
 
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      setProcessing(false);
+  //   } catch (error: any) {
+  //     console.error('Payment error:', error);
+  //     setProcessing(false);
       
-      toast({
-        title: "Payment Failed",
-        description: error.response?.data?.message || "Failed to initiate payment",
-        variant: "destructive"
-      });
-    }
+  //     toast({
+  //       title: "Payment Failed",
+  //       description: error.response?.data?.message || "Failed to initiate payment",
+  //       variant: "destructive"
+  //     });
+  //   }
+  // };
+
+  const handlePayment = async () => {
+    const { data } = await axios.post(
+      "http://localhost:3000/api/v1/payment/create-order",
+      { amount: listing.totalValue, listingId: listing._id  }, 
+      {headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`
+  }}
+    );
+
+    console.log(listing.totalValue, listing._id);
+
+    const order = data.order;
+    const options = {
+      key: "rzp_test_RlWT3nMgfVf39q",
+      amount: order.amount,
+      currency: "INR",
+      name: "Test Company",
+      description: "Test Transaction",
+      order_id: order.id,
+      //@ts-ignore
+      handler: async function(response: any) {
+        const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
+        const verifyResponse = await axios.post(verifyUrl, {
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+          listingId: listing._id,
+        }, { headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`
+  }}).then((res) => {
+          alert("Payment Successful");
+          console.log(res.data);
+        }).catch((err) => {
+          alert("Payment Failed");
+          console.log(err);
+        });
+        console.log('Verifying payment with:', verifyResponse);
+      },
+      theme:{
+        color:"#cc3333ff"
+      }
+    };
+    const rzp = new window.Razorpay(options);
+    rzp.open();
   };
 
   // Loading state
