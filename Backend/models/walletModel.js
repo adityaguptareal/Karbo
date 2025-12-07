@@ -1,3 +1,4 @@
+const mongoose=require("mongoose")
 const WalletSchema = new mongoose.Schema({
   farmerId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -13,12 +13,24 @@ const CarbonCreditListingSchema = new mongoose.Schema({
     required: true,
   },
 
-  totalCredits: { type: Number, required: true },
-  pricePerCredit: { type: Number, required: true },
-  
-  totalValue: { type: Number, required: true },
+  totalCredits: { 
+    type: Number, 
+    required: true 
+  },
 
-  description: String,
+  pricePerCredit: { 
+    type: Number, 
+    required: true 
+  },
+
+  totalValue: { 
+    type: Number, 
+    required: true 
+  }, // totalCredits * pricePerCredit
+
+  description: { 
+    type: String 
+  },
 
   status: {
     type: String,
@@ -26,7 +38,19 @@ const CarbonCreditListingSchema = new mongoose.Schema({
     default: "active",
   },
 
-  createdAt: { type: Date, default: Date.now },
+  validFrom: { type: Date, default: null },
+  validTill: { type: Date, default: null },
+
+   soldTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", 
+    default: null,
+  },
+
+  createdAt: { 
+    type: Date, 
+    default: Date.now()
+  },
 });
 
 module.exports = mongoose.model("CarbonCredit", CarbonCreditListingSchema);

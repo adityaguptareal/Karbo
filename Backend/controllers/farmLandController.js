@@ -86,11 +86,10 @@ exports.getMyFarmlands = async (req, res) => {
   }
 };
 
-/* ==========================================================
-   3️⃣ Get Farmland By ID (Farmer/Admin)
-========================================================== */
+
 exports.getFarmlandById = async (req, res) => {
   try {
+    console.log("Get the ideas")
     const farmland = await Farmland.findById(req.params.id);
 
     if (!farmland) {
