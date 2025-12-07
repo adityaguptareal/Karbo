@@ -20,6 +20,7 @@ import CompanyImpactReport from "./components/company/CompanyImpactReport";
 import CompanySettings from "./components/company/CompanySettings";
 import CompanyMarketplace from "./components/company/CompanyMarketplace";
 import CompanyCheckout from "./components/company/CompanyCheckout";
+import OrderSuccess from "./components/company/OrderSuccess";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/company/impact" element={<CompanyImpactReport />} />
           <Route path="/company/settings" element={<CompanySettings />} />
           <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
+          <Route path="/company/order-success" element={<OrderSuccess />} />
           
           {/* Admin Dashboard Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />

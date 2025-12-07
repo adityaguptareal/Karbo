@@ -7,7 +7,6 @@ import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { authService } from "@/services/authService";
-import { companyService } from "@/services/companyService";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -15,25 +14,23 @@ import {
   BarChart3,
   Settings,
   User,
-  Building2,
   Mail,
   Phone,
+  Building2,
   MapPin,
   Upload,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Shield,
   FileCheck,
   AlertCircle,
   Loader2,
-  Lock,
-  Bell,
-  CreditCard,
-  LogOut,
-  Save,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
@@ -43,70 +40,128 @@ const navItems = [
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-interface UserProfile {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  companyDocuments?: string[];
-  rejectionReason?: string;
-  walletBalance?: number;
-  isBlocked?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+interface DocumentUpload {
+  type: string;
+  label: string;
+  description: string;
+  icon: any;
+  file: File | null;
+  url: string | null;
+  status: 'not_uploaded' | 'uploaded' | 'pending' | 'verified' | 'rejected';
 }
 
 const CompanySettings = () => {
-  const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'security' | 'notifications'>('profile');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [uploadingDocs, setUploadingDocs] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
-  const [profileForm, setProfileForm] = useState({
-    name: "",
+  // Profile State
+  const [profileData, setProfileData] = useState({
     email: "",
+    phone: "",
+    companyName: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
   });
 
+  // Verification State
+  const [verificationStatus, setVerificationStatus] = useState('not_submitted');
+  const [isVerified, setIsVerified] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  // Document State
+  const [documents, setDocuments] = useState<DocumentUpload[]>([
+    {
+      type: 'registration_certificate',
+      label: 'Company Registration Certificate',
+      description: 'Certificate of Incorporation or Business Registration',
+      icon: Building2,
+      file: null,
+      url: null,
+      status: 'not_uploaded'
+    },
+    {
+      type: 'gst_certificate',
+      label: 'GST Registration Certificate',
+      description: 'Goods and Services Tax Registration',
+      icon: FileCheck,
+      file: null,
+      url: null,
+      status: 'not_uploaded'
+    },
+    {
+      type: 'pan_card',
+      label: 'PAN Card',
+      description: 'Company PAN Card',
+      icon: FileText,
+      file: null,
+      url: null,
+      status: 'not_uploaded'
+    },
+    {
+      type: 'address_proof',
+      label: 'Address Proof',
+      description: 'Electricity bill, Rent agreement, or Property documents',
+      icon: MapPin,
+      file: null,
+      url: null,
+      status: 'not_uploaded'
+    }
+  ]);
 
-  // Fetch profile on mount
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
+  // Fetch Profile Data
   const fetchProfile = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
       const response = await axios.get(`${API_BASE_URL}/profile/me`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.data.user) {
-        const profileData = response.data.user;
-        setProfile(profileData);
-        setProfileForm({
-          name: profileData.name || "",
-          email: profileData.email || "",
+        const user = response.data.user;
+        
+        console.log('User data:', user); // ✅ Debug - check what you're receiving
+        console.log('Status:', user.status); // ✅ Debug
+        
+        setProfileData({
+          email: user.email || "",
+          phone: user.phone || "",
+          companyName: user.name || "",
+          address: user.address || "",
+          city: user.city || "",
+          state: user.state || "",
+          pincode: user.pincode || "",
         });
+
+        // ✅ Check the correct field
+        const status = user.status || 'not_submitted';
+        const isVerified = status === 'verified';
+        
+        setIsVerified(isVerified);
+        setVerificationStatus(status);
+
+        // Load documents if they exist
+        if (user.companyDocuments && user.companyDocuments.length > 0) {
+          const updatedDocs = documents.map((doc, index) => {
+            if (user.companyDocuments[index]) {
+              return {
+                ...doc,
+                url: user.companyDocuments[index],
+                status: status === 'verified' ? 'verified' : 'uploaded'
+              };
+            }
+            return doc;
+          });
+          setDocuments(updatedDocs);
+        }
       }
     } catch (error: any) {
-      console.error('Fetch profile error:', error);
+      console.error('Error fetching profile:', error);
       toast({
         title: "Error",
-        description: "Failed to load profile data",
+        description: error.response?.data?.msg || "Failed to load profile data",
         variant: "destructive"
       });
     } finally {
@@ -114,77 +169,61 @@ const CompanySettings = () => {
     }
   };
 
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
+  // Handle File Selection
+  const handleFileSelect = (index: number, file: File | null) => {
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please upload PDF, JPG, or PNG files only",
+          variant: "destructive"
+        });
+        return;
+      }
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setSaving(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await axios.put(
-        `${API_BASE_URL}/profile/update`,
-        {
-          name: profileForm.name,
-          // Only sending name since that's the only editable field
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        }
-      );
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please upload files smaller than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      // Update localStorage user data
-      const updatedUser = { ...currentUser, name: profileForm.name };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
-      toast({
-        title: "Success",
-        description: response.data.msg || "Profile updated successfully",
-      });
-
-      fetchProfile();
-    } catch (error: any) {
-      console.error('Update profile error:', error);
-      toast({
-        title: "Update Failed",
-        description: error.response?.data?.msg || "Failed to update profile",
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
+      const updatedDocs = [...documents];
+      updatedDocs[index].file = file;
+      setDocuments(updatedDocs);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setSelectedFiles(filesArray);
-    }
-  };
-
-  const handleDocumentUpload = async () => {
-    if (selectedFiles.length === 0) {
+  // Upload Single Document - CHANGED to upload immediately
+  const uploadDocument = async (index: number) => {
+    const doc = documents[index];
+    if (!doc.file) {
       toast({
-        title: "No files selected",
-        description: "Please select documents to upload",
+        title: "No File Selected",
+        description: "Please select a file to upload",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      setUploadingDocs(true);
-      
+      setUploading(true);
+
       const formData = new FormData();
-      selectedFiles.forEach(file => {
-        formData.append('documents', file);
-      });
+      formData.append('documents', doc.file); // ✅ Use 'documents' as key
 
       const token = localStorage.getItem('token');
-      
       const response = await axios.post(
-        `${API_BASE_URL}/company/documents/upload`,
+        `${API_BASE_URL}/company/documents/upload`, // ✅ Use company route
         formData,
         {
           headers: {
@@ -194,99 +233,130 @@ const CompanySettings = () => {
         }
       );
 
-      toast({
-        title: "Success",
-        description: "Documents uploaded successfully. Waiting for admin verification.",
-      });
+      if (response.data.msg) {
+        const updatedDocs = [...documents];
+        updatedDocs[index].status = 'uploaded';
+        updatedDocs[index].file = null;
+        setDocuments(updatedDocs);
 
-      setSelectedFiles([]);
-      fetchProfile();
+        toast({
+          title: "Document Uploaded",
+          description: `${doc.label} uploaded successfully`,
+        });
+
+        // Refresh profile to get updated status
+        fetchProfile();
+      }
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
-        description: error.response?.data?.msg || "Failed to upload documents",
+        description: error.response?.data?.msg || "Failed to upload document",
         variant: "destructive"
       });
     } finally {
-      setUploadingDocs(false);
+      setUploading(false);
     }
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+  // Submit for Verification (when documents are already uploaded)
+  const submitForVerification = async () => {
+    // Check if at least some documents have files OR urls
+    const hasDocuments = documents.some(doc => doc.file !== null || doc.url !== null);
+    
+    if (!hasDocuments) {
       toast({
-        title: "Validation Error",
-        description: "New passwords do not match",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      toast({
-        title: "Validation Error",
-        description: "Password must be at least 6 characters",
+        title: "No Documents",
+        description: "Please upload at least one document",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      setSaving(true);
+      setUploading(true);
+      const formData = new FormData();
+      
+      // Append files that aren't uploaded yet
+      documents.forEach((doc) => {
+        if (doc.file) {
+          formData.append('documents', doc.file);
+        }
+      });
+
       const token = localStorage.getItem('token');
       
-      const response = await axios.put(
-        `${API_BASE_URL}/profile/change-password`,  // Using your endpoint
+      const response = await axios.post(
+        `${API_BASE_URL}/company/documents/upload`,
+        formData,
         {
-          oldPassword: passwordForm.currentPassword,  // Changed to match your backend field name
-          newPassword: passwordForm.newPassword,
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          }
         }
       );
 
-      toast({
-        title: "Success",
-        description: response.data.msg || "Password changed successfully",
-      });
-      
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      if (response.data.msg) {
+        setVerificationStatus('pending_verification');
+        toast({
+          title: "Submitted for Verification ✓",
+          description: response.data.msg,
+        });
+        fetchProfile();
+      }
     } catch (error: any) {
-      console.error('Password change error:', error);
+      console.error('Submission error:', error);
       toast({
-        title: "Error",
-        description: error.response?.data?.msg || "Failed to change password",
+        title: "Submission Failed",
+        description: error.response?.data?.msg || "Failed to submit for verification",
         variant: "destructive"
       });
     } finally {
-      setSaving(false);
+      setUploading(false);
     }
   };
 
 
-  const handleLogout = () => {
-    authService.logout();
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out",
-    });
-    navigate('/login');
-  };
 
-  const getStatusBadge = () => {
-    switch (profile?.status) {
+  // Get Status Badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
       case 'verified':
-        return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400">Verified</Badge>;
-      case 'pending_verification':
-        return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400">Pending Verification</Badge>;
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Verified
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending Review
+          </Badge>
+        );
       case 'rejected':
-        return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400">Rejected</Badge>;
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+            <XCircle className="w-3 h-3 mr-1" />
+            Rejected
+          </Badge>
+        );
+      case 'uploaded':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Uploaded
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">Not Verified</Badge>;
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Not Uploaded
+          </Badge>
+        );
     }
   };
 
@@ -297,7 +367,7 @@ const CompanySettings = () => {
         userType="company"
         userName={currentUser?.name || "Company User"}
       >
-        <div className="flex items-center justify-center h-[60vh]">
+        <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
@@ -312,358 +382,302 @@ const CompanySettings = () => {
     >
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Settings</h1>
+            <p className="text-muted-foreground">
+              Manage your account settings and verification documents
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            {getStatusBadge(verificationStatus)}
+          </div>
         </div>
 
-        {/* Verification Status Banner */}
-        {profile?.status === 'pending_verification' && (
-          <Card className="border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10">
-            <CardContent className="flex items-center gap-3 p-4">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
+        {/* Verification Status Alert */}
+        {!isVerified && verificationStatus === 'not_submitted' && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
               <div className="flex-1">
-                <p className="font-semibold text-foreground">Verification Pending</p>
-                <p className="text-sm text-muted-foreground">
-                  Your documents are under review. You'll be notified once verified.
+                <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                  Verification Required
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Please upload all required documents below to verify your company account and start purchasing carbon credits.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {profile?.status === 'rejected' && profile.rejectionReason && (
-          <Card className="border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10">
-            <CardContent className="flex items-center gap-3 p-4">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">Verification Rejected</p>
-                <p className="text-sm text-muted-foreground">
-                  Reason: {profile.rejectionReason}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar Tabs */}
-          <div className="lg:col-span-1">
-            <Card className="border border-border">
-              <CardContent className="p-4">
-                <nav className="space-y-2">
-                  <button
-                    onClick={() => setActiveTab('profile')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      activeTab === 'profile'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('documents')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      activeTab === 'documents'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    <FileCheck className="w-5 h-5" />
-                    <span>Documents</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('security')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      activeTab === 'security'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    <Lock className="w-5 h-5" />
-                    <span>Security</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('notifications')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      activeTab === 'notifications'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    <Bell className="w-5 h-5" />
-                    <span>Notifications</span>
-                  </button>
-                  
-                  <Separator className="my-4" />
-                  
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>Logout</span>
-                  </button>
-                </nav>
-              </CardContent>
-            </Card>
+            </div>
           </div>
+        )}
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Profile Tab */}
-            {activeTab === 'profile' && (
-              <Card className="border border-border">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Company Profile</CardTitle>
-                      <CardDescription>Update your company information</CardDescription>
+        {verificationStatus === 'pending' && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                  Under Review
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Your documents are being reviewed by our team. This usually takes 24-48 hours.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isVerified && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                  Verified Account
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Your company account is verified. You can now purchase carbon credits from the marketplace.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Profile Information */}
+          <Card className="border border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Profile Information
+              </CardTitle>
+              <CardDescription>
+                Update your company details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={profileData.companyName}
+                  onChange={(e) => setProfileData({ ...profileData, companyName: e.target.value })}
+                  placeholder="Your Company Name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={profileData.email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  value={profileData.phone}
+                  onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                />
+              </div>
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                Update Profile
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Address Information */}
+          <Card className="border border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Company Address
+              </CardTitle>
+              <CardDescription>
+                Update your registered office address
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="address">Street Address</Label>
+                <Input
+                  id="address"
+                  value={profileData.address}
+                  onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                  placeholder="123 Business Street"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={profileData.city}
+                    onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                    placeholder="Mumbai"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={profileData.state}
+                    onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
+                    placeholder="Maharashtra"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="pincode">PIN Code</Label>
+                <Input
+                  id="pincode"
+                  value={profileData.pincode}
+                  onChange={(e) => setProfileData({ ...profileData, pincode: e.target.value })}
+                  placeholder="400001"
+                />
+              </div>
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
+                Update Address
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Verification Documents */}
+        <Card className="border-2 border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Verification Documents
+            </CardTitle>
+            <CardDescription>
+              Upload the following documents to verify your company account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {documents.map((doc, index) => {
+              const Icon = doc.icon;
+              return (
+                <div key={doc.type}>
+                  <div className="flex items-start gap-4 p-4 border border-border rounded-lg hover:border-primary/50 transition-colors">
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 rounded-lg">
+                      <Icon className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    {getStatusBadge()}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Company Name *</Label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input
-                          id="name"
-                          value={profileForm.name}
-                          onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                          className="pl-10"
-                          required
-                        />
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-foreground">
+                            {doc.label}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {doc.description}
+                          </p>
+                        </div>
+                        {getStatusBadge(doc.status)}
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input
-                          id="email"
-                          type="email"
-                          value={profileForm.email}
-                          className="pl-10"
-                          disabled
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Email cannot be changed</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Role</Label>
-                      <Input
-                        value={profile?.role || "company"}
-                        disabled
-                        className="capitalize"
-                      />
-                      <p className="text-xs text-muted-foreground">Role cannot be changed</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Wallet Balance</Label>
-                      <Input
-                        value={`₹${(profile?.walletBalance || 0).toFixed(2)}`}
-                        disabled
-                      />
-                      <p className="text-xs text-muted-foreground">View-only field</p>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Changes
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-
-            {/* Documents Tab */}
-            {activeTab === 'documents' && (
-              <Card className="border border-border">
-                <CardHeader>
-                  <CardTitle>Company Documents</CardTitle>
-                  <CardDescription>Upload verification documents for your company</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Upload Section */}
-                  <div className="border-2 border-dashed border-border rounded-lg p-6">
-                    <div className="flex flex-col items-center text-center">
-                      <Upload className="w-12 h-12 text-muted-foreground mb-4" />
-                      <h3 className="font-semibold mb-2">Upload Documents</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Accepted: Registration certificate, GST certificate, etc. (PDF, JPG, PNG)
-                      </p>
-                      <input
-                        type="file"
-                        id="doc-upload"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                      />
-                      <label htmlFor="doc-upload">
-                        <Button variant="outline" type="button" asChild>
-                          <span>Select Files</span>
-                        </Button>
-                      </label>
-                      
-                      {selectedFiles.length > 0 && (
-                        <div className="mt-4 w-full">
-                          <p className="text-sm font-medium mb-2">Selected Files:</p>
-                          <ul className="text-sm text-muted-foreground space-y-1">
-                            {selectedFiles.map((file, index) => (
-                              <li key={index}>{file.name}</li>
-                            ))}
-                          </ul>
+                      {doc.url ? (
+                        <div className="flex items-center gap-2 mt-3">
                           <Button
-                            onClick={handleDocumentUpload}
-                            className="mt-4 bg-emerald-600 hover:bg-emerald-700"
-                            disabled={uploadingDocs}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(doc.url!, '_blank')}
                           >
-                            {uploadingDocs ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Uploading...
-                              </>
+                            <FileCheck className="w-4 h-4 mr-2" />
+                            View Document
+                          </Button>
+                          {verificationStatus !== 'pending' && verificationStatus !== 'verified' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const updatedDocs = [...documents];
+                                updatedDocs[index].url = null;
+                                updatedDocs[index].status = 'not_uploaded';
+                                setDocuments(updatedDocs);
+                              }}
+                            >
+                              Replace
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-3">
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleFileSelect(index, e.target.files?.[0] || null)}
+                            className="flex-1"
+                            disabled={verificationStatus === 'pending' || verificationStatus === 'verified'}
+                          />
+                          <Button
+                            onClick={() => uploadDocument(index)}
+                            disabled={!doc.file || uploading || verificationStatus === 'pending' || verificationStatus === 'verified'}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            {uploading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <>
                                 <Upload className="w-4 h-4 mr-2" />
-                                Upload Documents
+                                Upload
                               </>
                             )}
                           </Button>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  {/* Uploaded Documents */}
-                  {profile?.companyDocuments && profile.companyDocuments.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold mb-3">Uploaded Documents</h3>
-                      <div className="space-y-2">
-                        {profile.companyDocuments.map((doc, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <FileCheck className="w-5 h-5 text-emerald-600" />
-                              <span className="text-sm">Document {index + 1}</span>
-                            </div>
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={doc} target="_blank" rel="noopener noreferrer">
-                                View
-                              </a>
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Security Tab */}
-            {activeTab === 'security' && (
-              <Card className="border border-border">
-                <CardHeader>
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>Manage your password and security preferences</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePasswordChange} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">New Password</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      disabled={saving}
-                    >
-                      {saving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Changing...
-                        </>
-                      ) : (
-                        'Change Password'
+                      {doc.file && !doc.url && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Selected: {doc.file.name} ({(doc.file.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
                       )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Notifications Tab */}
-            {activeTab === 'notifications' && (
-              <Card className="border border-border">
-                <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                  <CardDescription>Choose what updates you want to receive</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Notification preferences coming soon!
-                    </p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                  {index < documents.length - 1 && <Separator className="my-4" />}
+                </div>
+              );
+            })}
+
+            {/* Submit Button */}
+            {verificationStatus !== 'pending' && verificationStatus !== 'verified' && (
+              <div className="pt-4">
+                <Button
+                  onClick={submitForVerification}
+                  disabled={
+                    uploading || 
+                    verificationStatus === 'pending_verification' || 
+                    verificationStatus === 'verified'
+                  } // ✅ CORRECT - only disable if uploading or already submitted
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  size="lg"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5 mr-2" />
+                      Submit for Verification
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  By submitting, you confirm that all documents are authentic and accurate
+                </p>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

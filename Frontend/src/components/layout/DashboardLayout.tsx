@@ -1,39 +1,115 @@
-import { useState } from "react";
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, Bell, User, ChevronDown, LogOut, Settings, Home } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import axios from "axios";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
 }
+
 interface DashboardLayoutProps {
   navItems: NavItem[];
   userType: 'farmer' | 'company' | 'admin';
   userName: string;
   children: React.ReactNode;
 }
+
+interface Notification {
+  _id: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export function DashboardLayout({
   navItems,
   userType,
-  userName,
   children
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
+
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const notifs = response.data.notifications || [];
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n: Notification) => !n.isRead).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(
+        `${API_BASE_URL}/notifications/${notificationId}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUserName(response.data.user.name || "");
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+      }
+    };
+    fetchUserName();
+}, []);
+
+
+  useEffect(() => {
+    fetchNotifications();
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const userTypeColors = {
     farmer: 'bg-primary',
     company: 'bg-secondary',
     admin: 'bg-accent'
   };
-  return <div className="min-h-screen bg-muted/30">
-      {/* Top Navbar */}
+
+  return (
+    <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between h-16 px-4 lg:px-8">
           <div className="flex items-center gap-4">
-            <button className="lg:hidden p-2 rounded-lg hover:bg-muted" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <button 
+              className="lg:hidden p-2 rounded-lg hover:bg-muted" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             
@@ -42,7 +118,7 @@ export function DashboardLayout({
                 <Leaf className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display text-lg font-semibold text-foreground hidden sm:block">
-                ​Karbo
+                Karbo
               </span>
             </Link>
           </div>
@@ -54,15 +130,51 @@ export function DashboardLayout({
               </Link>
             </Button>
             
-            <button className="relative p-2 rounded-lg hover:bg-muted">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-            </button>
+            {/* Notification Bell */}
+            <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
+              <DropdownMenuTrigger asChild>
+                <button className="relative p-2 rounded-lg hover:bg-muted">
+                  <Bell className="w-5 h-5 text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-5 h-5 bg-destructive text-white text-xs rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="p-2 font-semibold border-b">Notifications</div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map((notif) => (
+                    <DropdownMenuItem
+                      key={notif._id}
+                      className={cn(
+                        "flex flex-col items-start p-3 cursor-pointer",
+                        !notif.isRead && "bg-primary/5"
+                      )}
+                      onClick={() => markAsRead(notif._id)}
+                    >
+                      <p className="text-sm">{notif.message}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(notif.createdAt).toLocaleDateString()}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
-                  <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-primary-foreground", userTypeColors[userType])}>
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-primary-foreground",
+                    userTypeColors[userType]
+                  )}>
                     <User className="w-4 h-4" />
                   </div>
                   <span className="text-sm font-medium hidden sm:block">{userName}</span>
@@ -71,7 +183,7 @@ export function DashboardLayout({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link to="/company/settings">
+                  <Link to={`/${userType}/settings`}>
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Link>
@@ -90,26 +202,44 @@ export function DashboardLayout({
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className={cn("fixed lg:sticky top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform lg:translate-x-0", sidebarOpen ? "translate-x-0" : "-translate-x-full")}>
+        <aside className={cn(
+          "fixed lg:sticky top-16 left-0 z-40 h-[calc(100vh-4rem)] w-64 bg-card border-r border-border transition-transform lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
           <nav className="p-4 space-y-1">
             {navItems.map(item => {
-            const isActive = location.pathname === item.href;
-            return <Link key={item.href} to={item.href} onClick={() => setSidebarOpen(false)} className={cn("flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    isActive 
+                      ? "bg-primary/10 text-primary" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
                   <item.icon className="w-5 h-5" />
                   {item.label}
-                </Link>;
-          })}
+                </Link>
+              );
+            })}
           </nav>
         </aside>
 
-        {/* Overlay */}
-        {sidebarOpen && <div className="fixed inset-0 z-30 bg-foreground/20 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-30 bg-foreground/20 lg:hidden" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+        )}
 
-        {/* Main Content */}
         <main className="flex-1 p-4 lg:p-8 min-h-[calc(100vh-4rem)]">
           {children}
         </main>
       </div>
-    </div>;
+    </div>
+  );
 }

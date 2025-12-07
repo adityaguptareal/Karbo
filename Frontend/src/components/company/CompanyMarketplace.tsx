@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { DashboardLayout } from "../layout/DashboardLayout";
 import { CreditCard } from "../shared/CreditCard";
 import { Button } from "../ui/button";
@@ -20,15 +21,22 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 import { 
   Search, 
   SlidersHorizontal, 
   Grid3X3, 
   List, 
   ShoppingCart, 
-  X,
-  Leaf,
-  MapPin,
   Trash2,
   LayoutDashboard,
   FileText,
@@ -36,10 +44,14 @@ import {
   Settings,
   ArrowRight,
   Loader2,
+  AlertCircle,
+  Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 interface CarbonListing {
   _id: string;
@@ -60,7 +72,7 @@ interface CarbonListing {
 }
 
 interface CartItem {
-  credit: CarbonListing; // Changed from 'any' to 'CarbonListing'
+  credit: CarbonListing;
   quantity: number;
 }
 
@@ -74,21 +86,82 @@ const navItems = [
 
 const CompanyMarketplace = () => {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-  const [priceRange, setPriceRange] = useState([0, 50]);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [minArea, setMinArea] = useState<number | undefined>();
+  const [maxArea, setMaxArea] = useState<number | undefined>();
+  const [location, setLocation] = useState("");
+  const [minCredits, setMinCredits] = useState<number | undefined>();
+  const [maxCredits, setMaxCredits] = useState<number | undefined>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // Verification state
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<string>('loading');
+
   // Backend data states
-  const [listings, setListings] = useState<CarbonListing[]>([]); // Changed from 'any[]' to 'CarbonListing[]'
+  const [listings, setListings] = useState<CarbonListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalListings, setTotalListings] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Fetch user verification status
+  const fetchVerificationStatus = async () => {
+  console.log('🚀 Starting fetchVerificationStatus...'); // ✅ Add this
+    try {
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token:', token ? 'exists' : 'missing'); // ✅ Add this
+      
+      const response = await axios.get(`${API_BASE_URL}/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      
+      const data = await response.data.user;
+      console.log('📦 Full response:', data);
+
+      if (data) {
+        const status = data.status || 'not_submitted';
+        setIsVerified(status === 'verified');
+        
+        console.log('✅ Setting state - Status:', status, 'IsVerified:', isVerified);
+      }
+    } catch (error) {
+      console.error('❌ Error:', error); // ✅ Add this
+      setVerificationStatus('not_submitted');
+      setIsVerified(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('🔄 Component mounted, fetching verification...'); // ✅ Add this
+    fetchVerificationStatus();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_BASE_URL}/profile/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCurrentUser(response.data.user);
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+      }
+    };
+    fetchUserName();
+  }, []);
+
+  console.log(currentUser.name)
 
   // Fetch listings from backend
   const fetchListings = async () => {
@@ -99,11 +172,21 @@ const CompanyMarketplace = () => {
         search: searchQuery || undefined,
         minPrice: priceRange[0],
         maxPrice: priceRange[1],
-        sort: sortBy === 'newest' ? 'newest' : 
-              sortBy === 'price-low' ? 'price_low' : 
-              sortBy === 'price-high' ? 'price_high' : 'newest',
+        minArea,
+        maxArea,
+        location: location || undefined,
+        minCredits,
+        maxCredits,
+        sort:
+          sortBy === "newest"
+            ? "newest"
+            : sortBy === "price-low"
+            ? "price_low"
+            : sortBy === "price-high"
+            ? "price_high"
+            : "newest",
         page: currentPage,
-        limit: 20
+        limit: 20,
       };
 
       const response = await marketplaceService.getListings(filters);
@@ -123,12 +206,20 @@ const CompanyMarketplace = () => {
     }
   };
 
-  // Fetch on mount and when filters change
   useEffect(() => {
     fetchListings();
-  }, [searchQuery, priceRange, sortBy, currentPage]);
+  }, [
+    searchQuery,
+    priceRange,
+    sortBy,
+    currentPage,
+    minArea,
+    maxArea,
+    location,
+    minCredits,
+    maxCredits,
+  ]);
 
-  // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (currentPage !== 1) setCurrentPage(1);
@@ -137,7 +228,14 @@ const CompanyMarketplace = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // ✅ UPDATED: Check verification before adding to cart
   const addToCart = (credit: CarbonListing) => {
+    // Check if user is verified
+    if (!isVerified) {
+      setShowVerificationDialog(true);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.credit._id === credit._id);
       if (existing) {
@@ -173,19 +271,31 @@ const CompanyMarketplace = () => {
     );
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.credit.pricePerCredit * item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + item.credit.totalValue, 0);
   const cartCredits = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const clearFilters = () => {
     setSearchQuery("");
-    setPriceRange([0, 50]);
+    setPriceRange([0, 1000]);
     setSortBy("newest");
     setCurrentPage(1);
+    setMinArea(undefined);
+    setMaxArea(undefined);
+    setLocation("");
+    setMinCredits(undefined);
+    setMaxCredits(undefined);
   };
 
-  const hasActiveFilters = searchQuery || priceRange[0] > 0 || priceRange[1] < 50;
+  const hasActiveFilters =
+  searchQuery ||
+  priceRange[0] > 0 ||
+  priceRange[1] < 1000 ||
+  minArea ||
+  maxArea ||
+  location ||
+  minCredits ||
+  maxCredits;
 
-  // ✅ Fixed checkout navigation
   const handleCheckout = () => {
     if (cart.length === 0) {
       toast({
@@ -196,7 +306,6 @@ const CompanyMarketplace = () => {
       return;
     }
 
-    // Navigate with the first item in cart (or you can handle multiple items differently)
     const firstItem = cart[0].credit;
     setCartOpen(false);
     navigate(`/company/checkout/${firstItem._id}`, { state: { cart } });
@@ -206,9 +315,42 @@ const CompanyMarketplace = () => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser?.name || "Company User"}
+      userName={currentUser.name}
     >
       <div className="space-y-6">
+        {/* Verification Alert Banner */}
+        {!isVerified && verificationStatus !== 'loading' && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                  Account Verification Required
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                  {verificationStatus === 'not_submitted' && 
+                    "You need to verify your company to purchase carbon credits. Please submit your documents."}
+                  {verificationStatus === 'pending_verification' && // ✅ Changed from 'pending'
+                    "Your verification is pending approval. You'll be able to purchase once verified."}
+                  {verificationStatus === 'rejected' && 
+                    "Your verification was rejected. Please resubmit with correct documents."}
+                </p>
+                {verificationStatus !== 'pending_verification' && ( // ✅ Changed from 'pending'
+                  <Button 
+                    size="sm" 
+                    onClick={() => navigate('/company/settings')}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Verify Account Now
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -243,7 +385,7 @@ const CompanyMarketplace = () => {
               
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <Leaf className="w-16 h-16 text-muted-foreground mb-4" />
+                  <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">Your cart is empty</p>
                   <p className="text-sm text-muted-foreground">Browse the marketplace to add credits</p>
                 </div>
@@ -258,29 +400,10 @@ const CompanyMarketplace = () => {
                         <p className="text-sm text-muted-foreground">
                           ₹{item.credit.pricePerCredit}/credit
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.credit._id, item.quantity - 1)}
-                          >
-                            -
-                          </Button>
-                          <span className="w-12 text-center">{item.quantity}</span>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.credit._id, item.quantity + 1)}
-                          >
-                            +
-                          </Button>
-                        </div>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-foreground">
-                          ₹{(item.credit.pricePerCredit * item.quantity).toFixed(2)}
+                          ₹{(item.credit.totalValue).toFixed(2)}
                         </p>
                         <Button 
                           variant="ghost" 
@@ -322,6 +445,45 @@ const CompanyMarketplace = () => {
           </Sheet>
         </div>
 
+        {/* Verification Dialog */}
+        <AlertDialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-yellow-600" />
+                Account Verification Required
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3 pt-2">
+                <p>
+                  You need to verify your company account before purchasing carbon credits.
+                </p>
+                <p className="font-medium">
+                  {verificationStatus === 'not_submitted' && 
+                    "Please submit your company documents to start the verification process."}
+                  {verificationStatus === 'pending' && 
+                    "Your verification is currently being reviewed by our team."}
+                  {verificationStatus === 'rejected' && 
+                    "Your previous verification was rejected. Please resubmit with correct documents."}
+                </p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              {verificationStatus !== 'pending' && (
+                <AlertDialogAction
+                  onClick={() => {
+                    setShowVerificationDialog(false);
+                    navigate('/company/settings');
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Go to Settings
+                </AlertDialogAction>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Filters Sidebar */}
           <aside className="w-full lg:w-72 flex-shrink-0">
@@ -340,11 +502,13 @@ const CompanyMarketplace = () => {
 
               {/* Search */}
               <div className="mb-6">
-                <label className="text-sm font-medium text-foreground mb-2 block">Search</label>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Search
+                </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search credits..."
+                  <Input
+                    placeholder="Search farmland or farmer..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -355,14 +519,76 @@ const CompanyMarketplace = () => {
               {/* Price Range */}
               <div className="mb-6">
                 <label className="text-sm font-medium text-foreground mb-2 block">
-                  Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
+                  Price Range (₹/credit): {priceRange[0]} - {priceRange[1]}
                 </label>
                 <Slider
                   value={priceRange}
                   onValueChange={setPriceRange}
-                  max={50}
-                  step={1}
+                  max={1000}
+                  step={10}
                   className="mt-3"
+                />
+              </div>
+
+              {/* Area filter */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Land Area (acres)
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={minArea ?? ""}
+                    onChange={(e) =>
+                      setMinArea(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={maxArea ?? ""}
+                    onChange={(e) =>
+                      setMaxArea(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Credits filter */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Available Credits
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={minCredits ?? ""}
+                    onChange={(e) =>
+                      setMinCredits(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={maxCredits ?? ""}
+                    onChange={(e) =>
+                      setMaxCredits(e.target.value ? Number(e.target.value) : undefined)
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Location filter */}
+              <div className="mb-2">
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Location (state / city)
+                </label>
+                <Input
+                  placeholder="e.g. Maharashtra"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
                 />
               </div>
             </div>
@@ -371,11 +597,11 @@ const CompanyMarketplace = () => {
           {/* Credits Grid */}
           <main className="flex-1">
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-muted-foreground">
+            <div className="grid md:flex items-center justify-between mb-6">
+              <p className="ml-5 mb-2 text-muted-foreground">
                 Showing {listings.length} of {totalListings} credits
               </p>
-              <div className="flex items-center gap-4">
+              <div className="flex ml-4 items-center gap-16">
                 <Select value={sortBy} onValueChange={setSortBy}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Sort by" />
@@ -413,7 +639,7 @@ const CompanyMarketplace = () => {
               </div>
             ) : listings.length === 0 ? (
               <div className="text-center py-16 bg-card rounded-xl border border-border">
-                <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <ShoppingCart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">No credits found</h3>
                 <p className="text-muted-foreground mb-4">Try adjusting your filters or search query</p>
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
@@ -421,7 +647,7 @@ const CompanyMarketplace = () => {
             ) : (
               <>
                 <div className={viewMode === 'grid' 
-                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" 
+                  ? "grid grid-cols-1 md:grid-cols-2 gap-6" 
                   : "space-y-4"
                 }>
                   {listings.map(credit => (
