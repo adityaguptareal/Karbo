@@ -233,12 +233,11 @@ const CompanyCheckout = () => {
     const { data } = await axios.post(
       "http://localhost:3000/api/v1/payment/create-order",
       { amount: listing.totalValue, listingId: listing._id  }, 
-      {headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`
-  }}
+      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
 
     console.log(listing.totalValue, listing._id);
+    console.log(listing);
 
     const order = data.order;
     const options = {
@@ -250,23 +249,49 @@ const CompanyCheckout = () => {
       order_id: order.id,
       //@ts-ignore
       handler: async function(response: any) {
-        const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
-        const verifyResponse = await axios.post(verifyUrl, {
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          listingId: listing._id,
-        }, { headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`
-  }}).then((res) => {
-          alert("Payment Successful");
-          console.log(res.data);
-        }).catch((err) => {
+        try {
+          const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
+          const verifyResponse = await axios.post(
+            verifyUrl,
+            {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              listingId: listing._id,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+
+          // If backend verification is successful:
+          // (adjust according to your verify API response)
+          if (verifyResponse.data.success) {
+            // Redirect to OrderSuccess with real data
+            console.log(listing);
+            navigate("/company/order-success", {
+              state: {
+                listing,
+                paymentDetails: {
+                  paymentId: response.razorpay_payment_id,
+                  orderId: response.razorpay_order_id,
+                  amount: listing.totalValue,
+                  currency: "INR",
+                  status: "SUCCESS",
+                },
+              },
+            });
+          } else {
+            alert("Payment verification failed");
+          }
+        } catch (err) {
           alert("Payment Failed");
           console.log(err);
-        });
-        console.log('Verifying payment with:', verifyResponse);
+        }
       },
+
       theme:{
         color:"#cc3333ff"
       }
@@ -281,7 +306,7 @@ const CompanyCheckout = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
+        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -440,18 +465,13 @@ const CompanyCheckout = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Platform Fee</span>
                     <span className="text-green-600">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">GST (18%)</span>
-                    <span>₹{(listing.totalValue * 0.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  
+                  </div>                  
                   <Separator />
                   
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-lg">Total</span>
                     <span className="font-bold text-2xl text-primary">
-                      ₹{(listing.totalValue * 1.18).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{(listing.totalValue).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

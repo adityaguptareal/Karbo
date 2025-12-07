@@ -17,11 +17,17 @@ import FarmerSettings from "./pages/farmer/FarmerSettings";
 import FarmerUpload from "./pages/farmer/FarmerUpload";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminVerification from "./pages/admin/AdminVerification";
+import AdminVerificationDetails from "./pages/admin/AdminVerificationDetails";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminPayouts from "./pages/admin/AdminPayouts";
 import NotFound from "./pages/NotFound";
 import CompanyImpactReport from "./components/company/CompanyImpactReport";
 import CompanySettings from "./components/company/CompanySettings";
 import CompanyMarketplace from "./components/company/CompanyMarketplace";
 import CompanyCheckout from "./components/company/CompanyCheckout";
+import OrderSuccess from "./components/company/OrderSuccess";
 
 const queryClient = new QueryClient();
 
@@ -36,11 +42,11 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/learn" element={<Learn />} />
           <Route path="/marketplace" element={<Marketplace />} />
-          
+
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           {/* Farmer Dashboard Routes */}
           <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
           <Route path="/farmer/marketplace" element={<FarmerMarketplace />} />
@@ -52,6 +58,9 @@ const App = () => (
           <Route path="/farmer/documents" element={<FarmerDashboard />} />
           <Route path="/farmer/settings" element={<FarmerSettings />} />
           
+
+         
+
           {/* Company Dashboard Routes */}
           <Route path="/company/dashboard" element={<CompanyDashboard />} />
           <Route path="/company/marketplace" element={<CompanyMarketplace />} />
@@ -59,14 +68,21 @@ const App = () => (
           <Route path="/company/impact" element={<CompanyImpactReport />} />
           <Route path="/company/settings" element={<CompanySettings />} />
           <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
+          <Route path="/company/order-success" element={<OrderSuccess />} />
           
+
           {/* Admin Dashboard Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/verification" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminDashboard />} />
-          <Route path="/admin/analytics" element={<AdminDashboard />} />
+
+
+          <Route path="/admin/verification" element={<AdminVerification />} />
+          <Route path="/admin/verification/:type/:id" element={<AdminVerificationDetails />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/admin/payouts" element={<AdminPayouts />} />
           <Route path="/admin/settings" element={<AdminDashboard />} />
-          
+          <Route path="/admin/api-features" element={<AdminDashboard />} />
+
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>

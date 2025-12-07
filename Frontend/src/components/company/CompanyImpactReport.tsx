@@ -133,7 +133,7 @@ const CompanyImpactReport = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
+        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -151,7 +151,7 @@ const CompanyImpactReport = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
+        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center max-w-md">
