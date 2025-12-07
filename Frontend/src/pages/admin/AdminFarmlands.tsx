@@ -11,12 +11,11 @@ import {
     Search,
     MoreVertical,
     Shield,
-    UserCheck,
-    UserX,
     DollarSign,
     Loader2,
     Filter,
-    MapPin
+    MapPin,
+    Maximize
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,34 +59,29 @@ const adminNavItems = [
     { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-export default function AdminUsers() {
+export default function AdminFarmlands() {
     const navigate = useNavigate();
-    const [users, setUsers] = useState<any[]>([]);
+    const [farmlands, setFarmlands] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [roleFilter, setRoleFilter] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const debouncedSearch = useDebounce(search, 500);
 
-    const fetchUsers = async () => {
+    const fetchFarmlands = async () => {
         setIsLoading(true);
         try {
-            const response = await adminAPI.getAllUsers(page, 10, debouncedSearch, statusFilter);
-            if (response.users) {
-                let filteredUsers = response.users;
-                if (roleFilter !== "all") {
-                    filteredUsers = filteredUsers.filter((user: any) => user.role === roleFilter);
-                }
-                setUsers(filteredUsers);
+            const response = await adminAPI.getAllFarmlands(page, 10, debouncedSearch, statusFilter);
+            if (response.farmlands) {
+                setFarmlands(response.farmlands);
                 setTotalPages(response.pagination?.pages || 1);
             }
         } catch (error) {
-            console.error("Error fetching users:", error);
+            console.error("Error fetching farmlands:", error);
             toast({
                 title: "Error",
-                description: "Failed to fetch users",
+                description: "Failed to fetch farmlands",
                 variant: "destructive"
             });
         } finally {
@@ -96,29 +90,11 @@ export default function AdminUsers() {
     };
 
     useEffect(() => {
-        fetchUsers();
-    }, [page, debouncedSearch, roleFilter, statusFilter]);
+        fetchFarmlands();
+    }, [page, debouncedSearch, statusFilter]);
 
-    const handleRowClick = (userId: string) => {
-        navigate(`/admin/users/${userId}`);
-    };
-
-    const handleToggleBlock = async (e: React.MouseEvent, userId: string) => {
-        e.stopPropagation();
-        try {
-            const response = await adminAPI.toggleBlockUser(userId);
-            toast({
-                title: "Success",
-                description: response.msg
-            });
-            fetchUsers(); // Refresh list
-        } catch (error: any) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to update user status",
-                variant: "destructive"
-            });
-        }
+    const handleRowClick = (farmlandId: string) => {
+        navigate(`/admin/farmlands/${farmlandId}`);
     };
 
     return (
@@ -129,22 +105,18 @@ export default function AdminUsers() {
             <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-display font-bold text-foreground">User Management</h1>
-                        <p className="text-muted-foreground mt-2">Manage user accounts and permissions.</p>
+                        <h1 className="text-3xl font-display font-bold text-foreground">Farmland Management</h1>
+                        <p className="text-muted-foreground mt-2">Manage all farmland listings and verifications.</p>
                     </div>
-                    <Button>
-                        <Shield className="w-4 h-4 mr-2" />
-                        Add Admin User
-                    </Button>
                 </div>
 
                 <Card>
                     <CardHeader>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <CardTitle>All Users</CardTitle>
+                                <CardTitle>All Farmlands</CardTitle>
                                 <CardDescription>
-                                    A list of all registered users including farmers and companies.
+                                    A list of all registered farmlands with their verification status.
                                 </CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
@@ -152,23 +124,12 @@ export default function AdminUsers() {
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         type="search"
-                                        placeholder="Search users..."
+                                        placeholder="Search farmlands..."
                                         className="pl-8 w-[250px]"
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                     />
                                 </div>
-                                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                                    <SelectTrigger className="w-[150px]">
-                                        <Filter className="w-4 h-4 mr-2" />
-                                        <SelectValue placeholder="Filter by role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Roles</SelectItem>
-                                        <SelectItem value="farmer">Farmer</SelectItem>
-                                        <SelectItem value="company">Company</SelectItem>
-                                    </SelectContent>
-                                </Select>
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="w-[150px]">
                                         <Filter className="w-4 h-4 mr-2" />
@@ -194,60 +155,58 @@ export default function AdminUsers() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Role</TableHead>
+                                            <TableHead>Land Name</TableHead>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Area</TableHead>
+                                            <TableHead>Owner</TableHead>
                                             <TableHead>Status</TableHead>
-                                            <TableHead>Block Status</TableHead>
-                                            <TableHead>Joined</TableHead>
+                                            <TableHead>Created</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {users.length === 0 ? (
+                                        {farmlands.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                                    No users found
+                                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                                    No farmlands found
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            users.map((user) => (
+                                            farmlands.map((farmland) => (
                                                 <TableRow
-                                                    key={user._id}
+                                                    key={farmland._id}
                                                     className="cursor-pointer hover:bg-muted/50"
-                                                    onClick={() => handleRowClick(user._id)}
+                                                    onClick={() => handleRowClick(farmland._id)}
                                                 >
                                                     <TableCell>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-medium">{user.name}</span>
-                                                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="w-4 h-4 text-green-600" />
+                                                            <span className="font-medium">{farmland.landName}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{farmland.location}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-1">
+                                                            <Maximize className="w-3 h-3" />
+                                                            <span>{farmland.area} acres</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Badge variant="outline" className={
-                                                            user.role === 'farmer' ? 'border-green-500 text-green-500' :
-                                                                user.role === 'company' ? 'border-blue-500 text-blue-500' :
-                                                                    'border-gray-500 text-gray-500'
-                                                        }>
-                                                            {user.role}
-                                                        </Badge>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm">{farmland.farmerId?.name || 'N/A'}</span>
+                                                            <span className="text-xs text-muted-foreground">{farmland.farmerId?.email || ''}</span>
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge variant={
-                                                            user.status === 'verified' ? 'default' :
-                                                                user.status === 'pending_verification' ? 'secondary' :
+                                                            farmland.status === 'verified' ? 'default' :
+                                                                farmland.status === 'pending_verification' ? 'secondary' :
                                                                     'destructive'
                                                         }>
-                                                            {user.status}
+                                                            {farmland.status}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell>
-                                                        {user.isBlocked ? (
-                                                            <Badge variant="destructive">Blocked</Badge>
-                                                        ) : (
-                                                            <Badge variant="outline" className="text-green-600 border-green-600">Active</Badge>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                                                    <TableCell>{new Date(farmland.createdAt).toLocaleDateString()}</TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
@@ -257,25 +216,8 @@ export default function AdminUsers() {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => handleRowClick(user._id)}>
+                                                                <DropdownMenuItem onClick={() => handleRowClick(farmland._id)}>
                                                                     View Details
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    className={user.isBlocked ? "text-green-600" : "text-red-600"}
-                                                                    onClick={(e) => handleToggleBlock(e as any, user._id)}
-                                                                >
-                                                                    {user.isBlocked ? (
-                                                                        <>
-                                                                            <UserCheck className="w-4 h-4 mr-2" />
-                                                                            Unblock User
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <UserX className="w-4 h-4 mr-2" />
-                                                                            Block User
-                                                                        </>
-                                                                    )}
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>

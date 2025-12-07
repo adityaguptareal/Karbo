@@ -81,7 +81,7 @@ const Index = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative pt-16 pb-12 md:pt-32 md:pb-28 lg:pt-40 lg:pb-32 overflow-hidden">
+      <section className="relative pt-12 pb-12 md:pt-24 md:pb-28 lg:pt-20px lg:pb-32 overflow-hidden">
         {/* Enhanced Decorative Elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-72 h-72 md:w-96 md:h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse-slow" />

@@ -41,29 +41,24 @@ const Login = () => {
         password: formData.password
       }));
 
-      const { token, role, status, msg } = response;
+      const { token, role, user, msg } = response;
 
-      // Token is already stored by authAPI.login, but we can double check or store extra user info if needed
-      // authAPI.login stores: authToken, userRole, userId
-
-      // We also store 'user' object for backward compatibility or other components
-      localStorage.setItem('user', JSON.stringify({
-        email: formData.email,
-        role: role,
-        status: status
-      }));
+      // Token is already stored by authAPI.login
+      // Role comes from the API response
 
       toast({
         title: "Welcome back!",
         description: msg || "You have successfully logged in.",
       });
 
-      // Route based on role
-      if (role === 'farmer') {
+      // Route based on role from API response
+      const userRole = role || user?.role;
+
+      if (userRole === 'farmer') {
         navigate('/farmer/dashboard');
-      } else if (role === 'company') {
+      } else if (userRole === 'company') {
         navigate('/company/dashboard');
-      } else if (role === 'admin') {
+      } else if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else {
         navigate('/');

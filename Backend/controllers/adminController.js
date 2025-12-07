@@ -260,6 +260,52 @@ const getUserDetails = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+    const status = req.query.status || "";
+
+    const query = {
+      role: { $in: ["farmer", "company"] }
+    };
+
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const users = await User.find(query)
+      .select("-passwordHash -googleId -__v")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const total = await User.countDocuments(query);
+
+    return res.status(200).json({
+      msg: "Users fetched successfully",
+      users,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error("getAllUsers error:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   rejectCompany,
   approveCompany,
@@ -269,6 +315,7 @@ module.exports = {
   approveUser,
   rejectUser,
   toggleBlockUser,
-  getUserDetails
+  getUserDetails,
+  getAllUsers
 };
 

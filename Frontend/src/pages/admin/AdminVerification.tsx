@@ -47,6 +47,7 @@ const adminNavItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Verifications", href: "/admin/verification", icon: FileCheck },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Farmlands", href: "/admin/farmlands", icon: MapPin },
     { label: "Analytics", href: "/admin/analytics", icon: BarChart },
     { label: "Payouts", href: "/admin/payouts", icon: DollarSign },
     { label: "API Features", href: "/admin/api-features", icon: Database },
@@ -248,8 +249,8 @@ export default function AdminVerification() {
                 <CardContent className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${item.type === 'farmland' ? 'bg-emerald-100 dark:bg-emerald-900/20' :
-                                item.type === 'farmer' ? 'bg-blue-100 dark:bg-blue-900/20' :
-                                    'bg-purple-100 dark:bg-purple-900/20'
+                            item.type === 'farmer' ? 'bg-blue-100 dark:bg-blue-900/20' :
+                                'bg-purple-100 dark:bg-purple-900/20'
                             }`}>
                             {icon}
                         </div>
@@ -284,8 +285,7 @@ export default function AdminVerification() {
         <DashboardLayout
             navItems={adminNavItems}
             userType="admin"
-            userName="System Admin"
-        >
+            >
             <div className="space-y-4 animate-in fade-in duration-500 h-[calc(100vh-100px)] flex flex-col">
                 <div className="flex items-center justify-between">
                     <div>

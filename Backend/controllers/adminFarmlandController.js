@@ -8,8 +8,8 @@ const getPendingFarmlands = async (req, res) => {
     const farmlands = await Farmland.find({
       status: "pending_verification",
     })
-    .populate("farmerId", "name email role status")
-    .select("-__v");
+      .populate("farmerId", "name email role status")
+      .select("-__v");
 
     return res.status(200).json({
       msg: "Pending farmlands fetched successfully",
@@ -66,7 +66,7 @@ const approveFarmland = async (req, res) => {
 
 const rejectFarmland = async (req, res) => {
   try {
-    if(!req.body){
+    if (!req.body) {
       return res.status(400).json({ msg: "Request body is required" });
     }
     const { reason } = req.body;
@@ -94,10 +94,57 @@ const rejectFarmland = async (req, res) => {
   }
 };
 
+const getAllFarmlands = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+    const status = req.query.status || "";
+
+    const query = {};
+
+    if (status && status !== "all") {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { landName: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { landType: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const farmlands = await Farmland.find(query)
+      .populate("farmerId", "name email role status")
+      .select("-__v")
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const total = await Farmland.countDocuments(query);
+
+    return res.status(200).json({
+      msg: "Farmlands fetched successfully",
+      farmlands,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error("getAllFarmlands error:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
+  }
+};
+
 
 module.exports = {
   getPendingFarmlands,
   getFarmlandFullDetails,
   approveFarmland,
   rejectFarmland,
+  getAllFarmlands,
 };

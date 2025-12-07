@@ -13,7 +13,7 @@ exports.registerUser = async (req, res) => {
         role: z.enum(["farmer", "company"]),
     });
 
-   
+
     try {
         const validation = requiredDataSchema.safeParse(req.body);
         if (!validation.success) {
@@ -75,6 +75,9 @@ exports.googleAuth = async (req, res) => {
         let existingUser = await User.findOne({ email });
 
         if (existingUser) {
+            if (existingUser.isBlocked) {
+                return res.status(403).json({ msg: "Your account has been blocked. Please contact support." });
+            }
             return res.status(200).json({
                 msg: "User already registered",
                 existingUser: existingUser._id,
@@ -127,6 +130,10 @@ exports.loginUser = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user || !user.passwordHash) {
             return res.status(400).json({ msg: "Invalid email or password" });
+        }
+
+        if (user.isBlocked) {
+            return res.status(403).json({ msg: "Your account has been blocked. Please contact support." });
         }
 
         const isValid = await bcrypt.compare(password, user.passwordHash);

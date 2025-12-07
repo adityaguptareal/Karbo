@@ -27,6 +27,10 @@ import CompanyImpactReport from "./components/company/CompanyImpactReport";
 import CompanySettings from "./components/company/CompanySettings";
 import CompanyMarketplace from "./components/company/CompanyMarketplace";
 import CompanyCheckout from "./components/company/CompanyCheckout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AdminUserDetails from "./pages/admin/AdminUserDetails";
+import AdminFarmlands from "./pages/admin/AdminFarmlands";
+import AdminFarmlandDetails from "./pages/admin/AdminFarmlandDetails";
 import OrderSuccess from "./components/company/OrderSuccess";
 
 const queryClient = new QueryClient();
@@ -47,41 +51,42 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Farmer Dashboard Routes */}
-          <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
-          <Route path="/farmer/marketplace" element={<FarmerMarketplace />} />
+          {/* Farmer Dashboard Routes - Protected */}
+          <Route element={<ProtectedRoute allowedRoles={['farmer']} />}>
+            <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+            <Route path="/farmer/marketplace" element={<FarmerMarketplace />} />
+            <Route path="/farmer/upload" element={<FarmerUpload />} />
+            <Route path="/farmer/credits" element={<FarmerDashboard />} />
+            <Route path="/farmer/wallet" element={<FarmerDashboard />} />
+            <Route path="/farmer/documents" element={<FarmerDashboard />} />
+            <Route path="/farmer/settings" element={<FarmerSettings />} />
+          </Route>
 
+          {/* Company Dashboard Routes - Protected */}
+          <Route element={<ProtectedRoute allowedRoles={['company']} />}>
+            <Route path="/company/dashboard" element={<CompanyDashboard />} />
+            <Route path="/company/marketplace" element={<CompanyMarketplace />} />
+            <Route path="/company/purchases" element={<CompanyPurchases />} />
+            <Route path="/company/impact" element={<CompanyImpactReport />} />
+            <Route path="/company/settings" element={<CompanySettings />} />
+            <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
+            <Route path="/company/order-success" element={<OrderSuccess />} />
+          </Route>
 
-          <Route path="/farmer/upload" element={<FarmerUpload />} />
-          <Route path="/farmer/credits" element={<FarmerDashboard />} />
-          <Route path="/farmer/wallet" element={<FarmerDashboard />} />
-          <Route path="/farmer/documents" element={<FarmerDashboard />} />
-          <Route path="/farmer/settings" element={<FarmerSettings />} />
-          
-
-         
-
-          {/* Company Dashboard Routes */}
-          <Route path="/company/dashboard" element={<CompanyDashboard />} />
-          <Route path="/company/marketplace" element={<CompanyMarketplace />} />
-          <Route path="/company/purchases" element={<CompanyPurchases />} />
-          <Route path="/company/impact" element={<CompanyImpactReport />} />
-          <Route path="/company/settings" element={<CompanySettings />} />
-          <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
-          <Route path="/company/order-success" element={<OrderSuccess />} />
-          
-
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-
-
-          <Route path="/admin/verification" element={<AdminVerification />} />
-          <Route path="/admin/verification/:type/:id" element={<AdminVerificationDetails />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          <Route path="/admin/payouts" element={<AdminPayouts />} />
-          <Route path="/admin/settings" element={<AdminDashboard />} />
-          <Route path="/admin/api-features" element={<AdminDashboard />} />
+          {/* Admin Dashboard Routes - Protected */}
+          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/verification" element={<AdminVerification />} />
+            <Route path="/admin/verification/:type/:id" element={<AdminVerificationDetails />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/users/:id" element={<AdminUserDetails />} />
+            <Route path="/admin/farmlands" element={<AdminFarmlands />} />
+            <Route path="/admin/farmlands/:id" element={<AdminFarmlandDetails />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/payouts" element={<AdminPayouts />} />
+            <Route path="/admin/settings" element={<AdminDashboard />} />
+            <Route path="/admin/api-features" element={<AdminDashboard />} />
+          </Route>
 
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />

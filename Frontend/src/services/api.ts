@@ -33,7 +33,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('userRole');
       localStorage.removeItem('userId');
@@ -43,12 +42,10 @@ api.interceptors.response.use(
   }
 );
 
-// Helper to get auth token from localStorage
 const getAuthToken = (): string | null => {
   return localStorage.getItem('token');
 };
 
-// Helper to set auth headers
 const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
   return {
@@ -57,14 +54,8 @@ const getAuthHeaders = (): HeadersInit => {
   };
 };
 
-// Auth APIs
 export const authAPI = {
-  register: async (data: {
-    name: string;
-    email: string;
-    password: string;
-    role: 'farmer' | 'company' | 'admin';
-  }) => {
+  register: async (data: { name: string; email: string; password: string; role: 'farmer' | 'company' | 'admin'; }) => {
     const response = await fetch(`${BASE_URL}/api/v1/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,9 +72,8 @@ export const authAPI = {
     });
     const result = await response.json();
     if (result.token) {
-      localStorage.setItem('authToken', result.token);
-      localStorage.setItem('userRole', result.user?.role || '');
-      localStorage.setItem('userId', result.user?._id || '');
+      // Store only the token - user data will be fetched via /api/v1/profile/me
+      localStorage.setItem('token', result.token);
     }
     return result;
   },
@@ -96,7 +86,6 @@ export const authAPI = {
   }
 };
 
-// Profile APIs
 export const profileAPI = {
   getProfile: async () => {
     const response = await fetch(`${BASE_URL}/api/v1/profile/me`, {
@@ -133,7 +122,6 @@ export const profileAPI = {
   }
 };
 
-// Farmland APIs
 export const farmlandAPI = {
   create: async (formData: FormData) => {
     const token = getAuthToken();
@@ -162,7 +150,6 @@ export const farmlandAPI = {
   }
 };
 
-// Admin APIs
 export const adminAPI = {
   createAdmin: async (data: { name: string; email: string; password: string }) => {
     const response = await fetch(`${BASE_URL}/api/v1/admin/create`, {
@@ -247,31 +234,57 @@ export const adminAPI = {
     const response = await fetch(`${BASE_URL}/api/v1/dashboard/admin`, {
       headers: getAuthHeaders()
     });
-
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.msg || data.error || "Failed to fetch stats");
     }
-
     return response.json();
   },
 
-  getAllUsers: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/users`, {
+  getAllUsers: async (page = 1, limit = 10, search = "", status = "") => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/users?page=${page}&limit=${limit}&search=${search}&status=${status}`, {
       headers: getAuthHeaders()
     });
     return response.json();
   },
 
-  getAllTransactions: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/transactions`, {
+  toggleBlockUser: async (userId: string) => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/users/block/${userId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getAllFarmlands: async (page = 1, limit = 10, search = "", status = "") => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands?page=${page}&limit=${limit}&search=${search}&status=${status}`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getAllPayouts: async (page = 1, limit = 10, search = "") => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/payouts?page=${page}&limit=${limit}&search=${search}`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getPayoutDetails: async (payoutId: string) => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/payouts/${payoutId}`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getFarmerPayoutSummary: async () => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/payouts/summary`, {
       headers: getAuthHeaders()
     });
     return response.json();
   }
 };
 
-// Health check
 export const healthCheck = async () => {
   const response = await fetch(`${BASE_URL}/health`);
   return response.json();
