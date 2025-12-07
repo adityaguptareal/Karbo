@@ -8,7 +8,8 @@ import {
     Database,
     TrendingUp,
     DollarSign,
-    Leaf
+    Leaf,
+    MapPin
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,6 +30,7 @@ const adminNavItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Verifications", href: "/admin/verification", icon: FileCheck },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Farmlands", href: "/admin/farmlands", icon: MapPin },
     { label: "Analytics", href: "/admin/analytics", icon: BarChart },
     { label: "Payouts", href: "/admin/payouts", icon: DollarSign },
     { label: "API Features", href: "/admin/api-features", icon: Database },
@@ -67,8 +69,7 @@ export default function AdminAnalytics() {
         <DashboardLayout
             navItems={adminNavItems}
             userType="admin"
-            userName="System Admin"
-        >
+            >
             <div className="space-y-8 animate-in fade-in duration-500">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-foreground">Platform Analytics</h1>

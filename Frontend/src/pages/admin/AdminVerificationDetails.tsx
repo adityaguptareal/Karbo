@@ -45,6 +45,7 @@ const adminNavItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Verifications", href: "/admin/verification", icon: FileCheck },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Farmlands", href: "/admin/farmlands", icon: MapPin },
     { label: "Analytics", href: "/admin/analytics", icon: BarChart },
     { label: "Payouts", href: "/admin/payouts", icon: DollarSign },
     { label: "API Features", href: "/admin/api-features", icon: Database },
@@ -138,7 +139,7 @@ export default function AdminVerificationDetails() {
 
     if (isLoading) {
         return (
-            <DashboardLayout navItems={adminNavItems} userType="admin" userName="System Admin">
+            <DashboardLayout navItems={adminNavItems} userType="admin" >
                 <div className="flex justify-center items-center h-[calc(100vh-100px)]">
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
@@ -148,7 +149,7 @@ export default function AdminVerificationDetails() {
 
     if (!data) {
         return (
-            <DashboardLayout navItems={adminNavItems} userType="admin" userName="System Admin">
+            <DashboardLayout navItems={adminNavItems} userType="admin" >
                 <div className="flex flex-col items-center justify-center h-[calc(100vh-100px)] text-muted-foreground">
                     <FileCheck className="w-12 h-12 mb-4 opacity-50" />
                     <p>Details not found</p>
@@ -163,7 +164,7 @@ export default function AdminVerificationDetails() {
     const isFarmland = type === 'farmland';
 
     return (
-        <DashboardLayout navItems={adminNavItems} userType="admin" userName="System Admin">
+        <DashboardLayout navItems={adminNavItems} userType="admin" >
             <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Header */}
                 <div className="flex items-center gap-4">

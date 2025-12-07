@@ -1,15 +1,16 @@
 const { Router } = require("express");
 const router = Router();
-const { createAdmin, rejectUser, approveUser, toggleBlockUser, PendingUsers, getUserDetails } = require("../controllers/adminController");
+const { createAdmin, rejectUser, approveUser, toggleBlockUser, PendingUsers, getUserDetails, getAllUsers } = require("../controllers/adminController");
 const { loginUser } = require("../controllers/authController");
 const auth = require("../middleware/authMiddleware");
 const isAdmin = require("../middleware/isAdmin");
-const { getPendingFarmlands, getFarmlandFullDetails, approveFarmland, rejectFarmland } = require("../controllers/adminFarmlandController");
+const { getPendingFarmlands, getFarmlandFullDetails, approveFarmland, rejectFarmland, getAllFarmlands } = require("../controllers/adminFarmlandController");
 const {
   getPendingCompanies,
   approveCompany,
   rejectCompany
 } = require("../controllers/adminController");
+const { getAllPayouts, getPayoutDetails, getFarmerPayoutSummary } = require("../controllers/adminWalletController");
 
 router.post("/login", loginUser);
 
@@ -21,6 +22,7 @@ router.post("/create", createAdmin);
 
 // user management routes
 router.get("/users/pending", PendingUsers);
+router.get("/users", getAllUsers);
 router.patch("/users/reject/:id", rejectUser);
 router.patch("/users/approve/:id", approveUser);
 router.patch("/users/block/:id", toggleBlockUser);
@@ -29,6 +31,7 @@ router.get("/users/:id", getUserDetails);
 
 // farmland management routes
 router.get('/farmlands/pending', getPendingFarmlands);
+router.get('/farmlands', getAllFarmlands);
 router.get('/farmlands/:id', getFarmlandFullDetails);
 router.patch('/farmlands/approve/:id', approveFarmland);
 router.patch('/farmlands/reject/:id', rejectFarmland);
@@ -37,6 +40,11 @@ router.patch('/farmlands/reject/:id', rejectFarmland);
 router.get("/company/pending", getPendingCompanies);
 router.patch("/company/approve/:id", approveCompany);
 router.patch("/company/reject/:id", rejectCompany);
+
+// wallet/payout management routes
+router.get("/payouts", getAllPayouts);
+router.get("/payouts/summary", getFarmerPayoutSummary);
+router.get("/payouts/:id", getPayoutDetails);
 
 
 module.exports = router;
