@@ -53,7 +53,7 @@ const App = () => (
           <Route path="/company/purchases" element={<CompanyPurchases />} />
           <Route path="/company/impact" element={<CompanyImpactReport />} />
           <Route path="/company/settings" element={<CompanySettings />} />
-          <Route path="/company/checkout" element={<CompanyCheckout />} />
+          <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
           
           {/* Admin Dashboard Routes */}
           <Route path="/admin/dashboard" element={<AdminDashboard />} />

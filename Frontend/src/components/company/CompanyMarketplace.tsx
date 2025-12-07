@@ -277,7 +277,7 @@ const CompanyMarketplace = () => {
                       size="lg"
                       onClick={() => {
                         setCartOpen(false);
-                        navigate('/company/checkout', { state: { cart } });
+                        navigate(`/company/checkout/${listing._id}`, { state: { cart } });
                       }}
                     >
                       Proceed to Checkout
