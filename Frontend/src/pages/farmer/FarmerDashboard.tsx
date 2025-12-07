@@ -1,14 +1,29 @@
-// src/pages/farmer/FarmerDashboard.tsx
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { LayoutDashboard, Upload, Leaf, Wallet, FileText, Settings, TrendingUp, DollarSign, Clock, CheckCircle, ArrowUpRight } from "lucide-react";
+import {
+  LayoutDashboard,
+  Upload,
+  Leaf,
+  Wallet,
+  FileText,
+  Settings,
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  ArrowUpRight,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { profileAPI, farmlandAPI } from "@/services/api";
+import {
+  profileAPI,
+  farmlandAPI,
+  type UserProfile,
+  type Farmland,
+} from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
@@ -19,63 +34,50 @@ const navItems = [
   { label: "Settings", href: "/farmer/settings", icon: Settings },
 ];
 
-interface FarmerProfile {
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-}
-
-interface Farmland {
-  _id: string;
-  landName: string;
-  location: string;
-  area: number;
-  landType: string;
-  cultivationMethod: string;
-  status: string;
-  createdAt: string;
-  images: string[];
-}
-
 const FarmerDashboard = () => {
-  const [profile, setProfile] = useState<FarmerProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [farmlands, setFarmlands] = useState<Farmland[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [profileData, farmlandsData] = await Promise.all([
+          profileAPI.getProfile(),
+          farmlandAPI.getMyFarmlands(),
+        ]);
+
+        setProfile(profileData);
+        setFarmlands(farmlandsData ?? []);
+      } catch (error: any) {
+        console.error(error);
+        toast({
+          title: "Error",
+          description:
+            error?.message || "Failed to fetch dashboard data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [profileResult, farmlandsResult] = await Promise.all([
-        profileAPI.getProfile(),
-        farmlandAPI.getMyFarmlands()
-      ]);
-
-      if (profileResult.success) {
-        setProfile(profileResult.data);
-      }
-
-      if (farmlandsResult.success) {
-        setFarmlands(farmlandsResult.data || []);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch dashboard data",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const totalFarmlands = farmlands.length;
-  const approvedFarmlands = farmlands.filter(f => f.status === 'approved').length;
-  const pendingFarmlands = farmlands.filter(f => f.status === 'pending').length;
-  const totalArea = farmlands.reduce((sum, f) => sum + f.area, 0);
+  const approvedFarmlands = farmlands.filter(
+    (f) => f.status?.toLowerCase() === "approved"
+  ).length;
+  const pendingFarmlands = farmlands.filter(
+    (f) => f.status?.toLowerCase() === "pending"
+  ).length;
+
+  // area is a string in API, so convert safely
+  const totalArea = farmlands.reduce(
+    (sum, f) => sum + Number(f.area || 0),
+    0
+  );
 
   if (isLoading) {
     return (
@@ -87,28 +89,38 @@ const FarmerDashboard = () => {
     );
   }
 
+  const firstName =
+    profile?.name && profile.name.trim().length > 0
+      ? profile.name.split(" ")[0]
+      : "Farmer";
+
   return (
-    <DashboardLayout navItems={navItems} userType="farmer" userName={profile?.name || "Farmer"}>
+    <DashboardLayout
+      navItems={navItems}
+      userType="farmer"
+      userName={profile?.name || "Farmer"}
+    >
       <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-            Welcome back, {profile?.name.split(' ')[0]}!
+            Welcome back, {firstName}!
           </h1>
           <p className="text-muted-foreground">
-            Here's an overview of your farm's carbon credit activity
+            Here's an overview of your farm&apos;s carbon credit activity
           </p>
         </div>
 
         {/* Account Status Alert */}
-        {profile?.status === 'pending' && (
+        {profile?.status?.toLowerCase() === "pending" && (
           <div className="bg-warning/10 border border-warning/20 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <Clock className="w-5 h-5 text-warning" />
               <div>
                 <p className="font-medium text-foreground">Account Under Review</p>
                 <p className="text-sm text-muted-foreground">
-                  Your account is being verified by our admin team. You'll be notified once approved.
+                  Your account is being verified by our admin team. You&apos;ll be
+                  notified once approved.
                 </p>
               </div>
             </div>
@@ -117,33 +129,38 @@ const FarmerDashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard 
-            title="Total Farmlands" 
-            value={totalFarmlands.toString()} 
-            subtitle="Registered farms" 
-            icon={Leaf} 
-            variant="primary" 
+          <StatsCard
+            title="Total Farmlands"
+            value={totalFarmlands.toString()}
+            subtitle="Registered farms"
+            icon={Leaf}
+            variant="primary"
           />
-          <StatsCard 
-            title="Approved Farmlands" 
-            value={approvedFarmlands.toString()} 
-            subtitle="Verified and active" 
-            icon={CheckCircle} 
-            trend={{ value: approvedFarmlands > 0 ? 100 : 0, isPositive: true }}
+          <StatsCard
+            title="Approved Farmlands"
+            value={approvedFarmlands.toString()}
+            subtitle="Verified and active"
+            icon={CheckCircle}
+            trend={{
+              value: totalFarmlands
+                ? Math.round((approvedFarmlands / totalFarmlands) * 100)
+                : 0,
+              isPositive: true,
+            }}
           />
-          <StatsCard 
-            title="Pending Verification" 
-            value={pendingFarmlands.toString()} 
-            subtitle="Under review" 
-            icon={Clock} 
-            variant="accent" 
+          <StatsCard
+            title="Pending Verification"
+            value={pendingFarmlands.toString()}
+            subtitle="Under review"
+            icon={Clock}
+            variant="accent"
           />
-          <StatsCard 
-            title="Total Area" 
-            value={`${totalArea}`} 
-            subtitle="Acres registered" 
-            icon={TrendingUp} 
-            variant="secondary" 
+          <StatsCard
+            title="Total Area"
+            value={`${totalArea}`}
+            subtitle="Acres registered"
+            icon={TrendingUp}
+            variant="secondary"
           />
         </div>
 
@@ -151,16 +168,20 @@ const FarmerDashboard = () => {
           {/* Farmlands Overview */}
           <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="font-semibold text-lg text-foreground">Your Farmlands</h2>
+              <h2 className="font-semibold text-lg text-foreground">
+                Your Farmlands
+              </h2>
               <Button variant="outline" size="sm" asChild>
                 <Link to="/farmer/farmlands">View All</Link>
               </Button>
             </div>
-            
+
             {farmlands.length === 0 ? (
               <div className="text-center py-12">
                 <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-foreground font-medium mb-2">No farmlands registered yet</p>
+                <p className="text-foreground font-medium mb-2">
+                  No farmlands registered yet
+                </p>
                 <p className="text-sm text-muted-foreground mb-6">
                   Start by uploading your first farmland documentation
                 </p>
@@ -174,10 +195,13 @@ const FarmerDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {farmlands.slice(0, 3).map((farmland) => (
-                  <div key={farmland._id} className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                  <div
+                    key={farmland._id}
+                    className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                  >
                     {farmland.images && farmland.images.length > 0 ? (
-                      <img 
-                        src={farmland.images[0]} 
+                      <img
+                        src={farmland.images[0]}
                         alt={farmland.landName}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
@@ -187,15 +211,23 @@ const FarmerDashboard = () => {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground">{farmland.landName}</p>
-                      <p className="text-sm text-muted-foreground">{farmland.location}</p>
+                      <p className="font-medium text-foreground">
+                        {farmland.landName}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {farmland.location}
+                      </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-muted-foreground">{farmland.area} acres</span>
+                        <span className="text-xs text-muted-foreground">
+                          {farmland.area} acres
+                        </span>
                         <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">{farmland.landType}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {farmland.landType}
+                        </span>
                       </div>
                     </div>
-                    <StatusBadge status={farmland.status} />
+                    <StatusBadge status={farmland.status || "pending"} />
                   </div>
                 ))}
 
@@ -213,7 +245,9 @@ const FarmerDashboard = () => {
             {/* Status Breakdown */}
             {totalFarmlands > 0 && (
               <div className="border-t border-border pt-6 mt-6">
-                <h3 className="font-medium text-foreground mb-4">Verification Status</h3>
+                <h3 className="font-medium text-foreground mb-4">
+                  Verification Status
+                </h3>
                 <div className="space-y-3">
                   <div>
                     <div className="flex items-center justify-between text-sm mb-2">
@@ -222,8 +256,12 @@ const FarmerDashboard = () => {
                         {approvedFarmlands} of {totalFarmlands}
                       </span>
                     </div>
-                    <Progress 
-                      value={(approvedFarmlands / totalFarmlands) * 100} 
+                    <Progress
+                      value={
+                        totalFarmlands
+                          ? (approvedFarmlands / totalFarmlands) * 100
+                          : 0
+                      }
                       className="h-2 bg-success/20"
                     />
                   </div>
@@ -234,8 +272,12 @@ const FarmerDashboard = () => {
                         {pendingFarmlands} of {totalFarmlands}
                       </span>
                     </div>
-                    <Progress 
-                      value={(pendingFarmlands / totalFarmlands) * 100} 
+                    <Progress
+                      value={
+                        totalFarmlands
+                          ? (pendingFarmlands / totalFarmlands) * 100
+                          : 0
+                      }
                       className="h-2 bg-warning/20"
                     />
                   </div>
@@ -244,7 +286,7 @@ const FarmerDashboard = () => {
             )}
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions & Account Info */}
           <div className="space-y-6">
             <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
@@ -270,13 +312,14 @@ const FarmerDashboard = () => {
               </div>
             </div>
 
-            {/* Account Info */}
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Account Information</h3>
+              <h3 className="font-semibold text-foreground mb-4">
+                Account Information
+              </h3>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Status:</span>
-                  <StatusBadge status={profile?.status || 'pending'} />
+                  <StatusBadge status={profile?.status || "pending"} />
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Email:</span>
@@ -284,16 +327,18 @@ const FarmerDashboard = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Role:</span>
-                  <span className="text-foreground capitalize">{profile?.role}</span>
+                  <span className="text-foreground capitalize">
+                    {profile?.role}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Help Section */}
             <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
               <h3 className="font-semibold text-foreground mb-2">Need Help?</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Check our documentation or contact support for assistance with verification.
+                Check our documentation or contact support for assistance with
+                verification.
               </p>
               <Button variant="outline" size="sm" className="w-full">
                 Contact Support

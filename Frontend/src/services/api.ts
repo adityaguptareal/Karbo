@@ -1,210 +1,565 @@
-// src/services/api.ts
 
-const BASE_URL = 'https://karbo.onrender.com';
+import axios, { AxiosError } from "axios";
 
-// Helper to get auth token from localStorage
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_?? "https://karbo.onrender.com/api/v1";
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// ---- Auth token helpers ----
+const TOKEN_KEY = "karbo_token";
+
+export const getToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
 };
 
-// Helper to set auth headers
-const getAuthHeaders = (): HeadersInit => {
-  const token = getAuthToken();
+export const setToken = (token: string | null) => {
+  if (typeof window === "undefined") return;
+  if (!token) {
+    localStorage.removeItem(TOKEN_KEY);
+  } else {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+};
+
+// ---- Interceptors: attach Authorization header ----
+api.interceptors.request.use((config) => {
+  const token = getToken();
+
+  if (token) {
+    // make sure headers exists, but don't change its type
+    if (!config.headers) {
+      config.headers = {} as any;
+    }
+
+    (config.headers as any).Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+
+
+// ---- Basic error normaliser ----
+export interface NormalizedError {
+  message: string;
+  status?: number;
+  data?: any;
+}
+
+const normalizeError = (error: unknown): NormalizedError => {
+  const err = error as AxiosError<any>;
+  if (err.response) {
+    return {
+      message:
+        (err.response.data as any)?.message ||
+        err.response.statusText ||
+        "Something went wrong",
+      status: err.response.status,
+      data: err.response.data,
+    };
+  }
+  if (err.request) {
+    return {
+      message: "Network error. Please check your connection.",
+    };
+  }
   return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': token } : {})
+    message: (err as any)?.message || "Unknown error",
   };
 };
 
-// Auth APIs
+/**
+ * COMMON RESPONSE SHAPE
+ * (Backend usually sends { success, message, data, ... })
+ */
+export interface ApiBaseResponse<T = any> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  token?: string;
+  user?: any;
+}
+
+/* ------------------------------------------------------------------ */
+/*                              AUTH API                              */
+/* ------------------------------------------------------------------ */
+
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  password: string;
+  role: "farmer" | "company";
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
 export const authAPI = {
-  register: async (data: {
-    name: string;
-    email: string;
-    password: string;
-    role: 'farmer' | 'company' | 'admin';
-  }) => {
-    const response = await fetch(`${BASE_URL}/api/v1/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return response.json();
-  },
-
-  login: async (data: { email: string; password: string }) => {
-    const response = await fetch(`${BASE_URL}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await response.json();
-    if (result.token) {
-      localStorage.setItem('authToken', result.token);
-      localStorage.setItem('userRole', result.user?.role || '');
-      localStorage.setItem('userId', result.user?._id || '');
+  async register(payload: RegisterPayload): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.post<ApiBaseResponse>("/auth/register", payload);
+      // If backend sends token on register, save it
+      if (data.token) setToken(data.token);
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
     }
-    return result;
   },
 
-  getMe: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/auth/me`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  }
+  async login(payload: LoginPayload): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.post<ApiBaseResponse>("/auth/login", payload);
+      if (data.token) setToken(data.token);
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async me(): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.get<ApiBaseResponse>("/auth/me");
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  logout() {
+    setToken(null);
+  },
 };
 
-// Profile APIs
+/* ------------------------------------------------------------------ */
+/*                            PROFILE API                             */
+/* ------------------------------------------------------------------ */
+
+export interface UserProfile {
+  _id: string;
+  name: string;
+  email: string;
+  role: "farmer" | "company" | "admin";
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+}
+
+export interface ChangePasswordPayload {
+  oldPassword: string;
+  newPassword: string;
+}
+
+export interface UpdateStatusPayload {
+  status: string; // e.g. "active", "inactive"
+}
+
 export const profileAPI = {
-  getProfile: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/profile/me`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async getProfile(): Promise<UserProfile> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<UserProfile>>("/profile/me");
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch profile" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  updateProfile: async (data: { name?: string; email?: string }) => {
-    const response = await fetch(`${BASE_URL}/api/v1/profile/update`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data)
-    });
-    return response.json();
+  async updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
+    try {
+      const { data } = await api.put<ApiBaseResponse<UserProfile>>(
+        "/profile/update",
+        payload
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to update profile" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  changePassword: async (data: { oldPassword: string; newPassword: string }) => {
-    const response = await fetch(`${BASE_URL}/api/v1/profile/change-password`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data)
-    });
-    return response.json();
+  async changePassword(payload: ChangePasswordPayload): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.put<ApiBaseResponse>(
+        "/profile/change-password",
+        payload
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  updateStatus: async (status: 'active' | 'inactive') => {
-    const response = await fetch(`${BASE_URL}/api/v1/profile/update-status`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status })
-    });
-    return response.json();
-  }
+  async updateStatus(payload: UpdateStatusPayload): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.put<ApiBaseResponse>(
+        "/profile/update-status",
+        payload
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
 };
 
-// Farmland APIs
+/* ------------------------------------------------------------------ */
+/*                           FARMLAND API                             */
+/* ------------------------------------------------------------------ */
+
+export interface Farmland {
+  _id: string;
+  landName: string;
+  location: string;
+  area: string;
+  landType: string;
+  cultivationMethod: string;
+  status: "pending" | "approved" | "rejected";
+  documents?: string[];
+  images?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateFarmlandPayload {
+  landName: string;
+  location: string;
+  area: string;
+  landType: string;
+  cultivationMethod: string;
+  documents?: File[];
+  images?: File[];
+}
+
+const buildFarmlandFormData = (payload: CreateFarmlandPayload) => {
+  const formData = new FormData();
+  formData.append("landName", payload.landName);
+  formData.append("location", payload.location);
+  formData.append("area", payload.area);
+  formData.append("landType", payload.landType);
+  formData.append("cultivationMethod", payload.cultivationMethod);
+
+  payload.documents?.forEach((file) => formData.append("documents", file));
+  payload.images?.forEach((file) => formData.append("images", file));
+
+  return formData;
+};
+
 export const farmlandAPI = {
-  create: async (formData: FormData) => {
-    const token = getAuthToken();
-    const response = await fetch(`${BASE_URL}/api/v1/farmland/create`, {
-      method: 'POST',
-      headers: {
-        ...(token ? { 'Authorization': token } : {})
-      },
-      body: formData
-    });
-    return response.json();
+  async createFarmland(payload: CreateFarmlandPayload): Promise<Farmland> {
+    try {
+      const formData = buildFarmlandFormData(payload);
+      const { data } = await api.post<ApiBaseResponse<Farmland>>(
+        "/farmland/create",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to create farmland" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  getMyFarmlands: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/farmland/my`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async getMyFarmlands(): Promise<Farmland[]> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<Farmland[]>>("/farmland/my");
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch farmlands" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  searchFarmlands: async (query: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/farmland/?q=${query}`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  }
+  async searchFarmlands(q: string): Promise<Farmland[]> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<Farmland[]>>(
+        `/farmland`,
+        { params: { q } }
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to search farmlands" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async getFarmlandById(id: string): Promise<Farmland> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<Farmland>>(
+        `/farmland/${id}`
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch farmland" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async deleteFarmland(id: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.delete<ApiBaseResponse>(`/farmland/${id}`);
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
 };
 
-// Admin APIs
+/* ------------------------------------------------------------------ */
+/*                      FARMER MARKETPLACE API                        */
+/* ------------------------------------------------------------------ */
+
+export interface FarmerListing {
+  _id: string;
+  farmlandId: string;
+  totalCredits: number;
+  pricePerCredit: number;
+  description: string;
+  status: "active" | "sold" | "cancelled";
+  createdAt?: string;
+}
+
+export interface CreateFarmerListingPayload {
+  farmlandId: string;
+  totalCredits: number;
+  pricePerCredit: number;
+  description: string;
+}
+
+export const farmerMarketplaceAPI = {
+  async createListing(
+    payload: CreateFarmerListingPayload
+  ): Promise<FarmerListing> {
+    try {
+      const { data } = await api.post<ApiBaseResponse<FarmerListing>>(
+        "/farmer-marketplace-listing/create",
+        payload
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to create listing" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async getMyListings(): Promise<FarmerListing[]> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<FarmerListing[]>>(
+        "/farmer-marketplace-listing/my"
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch listings" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async deleteListing(id: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.delete<ApiBaseResponse>(
+        `/farmer-marketplace-listing/${id}`
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*                             ADMIN API                              */
+/* ------------------------------------------------------------------ */
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  totalFarmers: number;
+  totalCompanies: number;
+  totalFarmlands: number;
+  pendingFarmlands: number;
+  approvedFarmlands: number;
+  rejectedFarmlands: number;
+  totalCredits?: number;
+  totalRevenue?: number;
+}
+
+export interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: "farmer" | "company";
+  status: string;
+  createdAt?: string;
+}
+
 export const adminAPI = {
-  createAdmin: async (data: { name: string; email: string; password: string }) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/create`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data)
-    });
-    return response.json();
+  // Dashboard stats
+  async getDashboardStats(): Promise<AdminDashboardStats> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<AdminDashboardStats>>(
+        "/admin/dashboard-stats"
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch admin stats" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  getPendingUsers: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/users/pending`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  // Pending users list
+  async getPendingUsers(): Promise<AdminUser[]> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<AdminUser[]>>(
+        "/admin/users/pending"
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch pending users" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  approveUser: async (userId: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/users/approve/${userId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async approveUser(userId: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.patch<ApiBaseResponse>(
+        `/admin/users/approve/${userId}`
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  rejectUser: async (userId: string, reason: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/users/reject/${userId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ reason })
-    });
-    return response.json();
+  async blockUser(userId: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.patch<ApiBaseResponse>(
+        `/admin/users/block/${userId}`
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  blockUser: async (userId: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/users/block/${userId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  // Pending farmlands list
+  async getPendingFarmlands(): Promise<Farmland[]> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<Farmland[]>>(
+        "/admin/farmlands/pending"
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch pending farmlands" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  getPendingFarmlands: async () => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands/pending`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async getFarmlandDetails(id: string): Promise<Farmland> {
+    try {
+      const { data } = await api.get<ApiBaseResponse<Farmland>>(
+        `/admin/farmlands/${id}`
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch farmland details" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  getFarmlandDetails: async (farmlandId: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands/${farmlandId}`, {
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async approveFarmland(id: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.patch<ApiBaseResponse>(
+        `/admin/farmlands/approve/${id}`
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
 
-  approveFarmland: async (farmlandId: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands/approve/${farmlandId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders()
-    });
-    return response.json();
+  async rejectFarmland(id: string, reason: string): Promise<ApiBaseResponse> {
+    try {
+      const { data } = await api.patch<ApiBaseResponse>(
+        `/admin/farmlands/reject/${id}`,
+        { reason }
+      );
+      return data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
   },
-
-  rejectFarmland: async (farmlandId: string) => {
-    const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands/reject/${farmlandId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders()
-    });
-    return response.json();
-  }
 };
 
-// Health check
-export const healthCheck = async () => {
-  const response = await fetch(`${BASE_URL}/health`);
-  return response.json();
+/* ------------------------------------------------------------------ */
+/*                           COMPANY API                              */
+/* ------------------------------------------------------------------ */
+
+export const companyAPI = {
+  // Example: fetch marketplace listings visible to companies
+  async getMarketplaceListings(params?: { q?: string }) {
+    try {
+      const { data } = await api.get<ApiBaseResponse<any[]>>(
+        "/company/marketplace-listings",
+        { params }
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch listings" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  // Example: fetch my purchases
+  async getMyPurchases() {
+    try {
+      const { data } = await api.get<ApiBaseResponse<any[]>>(
+        "/company/purchases/my"
+      );
+      if (!data.success || !data.data) {
+        throw { message: data.message || "Failed to fetch purchases" };
+      }
+      return data.data;
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
 };
 
-export default {
-  authAPI,
-  profileAPI,
-  farmlandAPI,
-  adminAPI,
-  healthCheck
-};
+export default api;

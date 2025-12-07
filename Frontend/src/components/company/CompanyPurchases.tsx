@@ -1,3 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
 import { DashboardLayout } from "../layout/DashboardLayout";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -17,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { allTransactions, carbonCredits, farmers, companies } from "@/data/mockData";
+
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -26,15 +29,15 @@ import {
   Settings,
   Download,
   Search,
-  Filter,
   Calendar,
   MapPin,
   Leaf,
   ExternalLink,
   FileCheck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+
+import { toast } from "@/hooks/use-toast";
+import { profileAPI, companyAPI, type UserProfile } from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
@@ -44,62 +47,175 @@ const navItems = [
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1];
+interface Purchase {
+  _id?: string;
+  id?: string;
+  transactionId?: string;
+
+  date?: string;
+  createdAt?: string;
+
+  creditsPurchased?: number;
+  credits?: number;
+  quantity?: number;
+  totalCredits?: number;
+
+  totalAmount?: number;
+  amount?: number;
+  pricePerCredit?: number;
+
+  status?: string;
+
+  practiceType?: string;
+  creditType?: string;
+
+  location?: string;
+  state?: string;
+
+  farmerName?: string;
+  farmerAvatar?: string;
+
+  farmer?: {
+    name?: string;
+    avatar?: string;
+  };
+
+  credit?: {
+    practiceType?: string;
+    location?: string;
+  };
+
+  [key: string]: any; // allow extra backend fields
+}
 
 const CompanyPurchases = () => {
+  const [company, setCompany] = useState<UserProfile | null>(null);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
 
-  // Get all purchase transactions
-  const purchases = allTransactions
-    .filter((t) => t.type === "purchase" && t.companyId === currentCompany.id)
-    .map((purchase) => {
-      const credit = carbonCredits.find((c) => c.id === purchase.creditId);
-      const farmer = credit ? farmers.find((f) => f.id === credit.farmerId) : null;
-      return {
-        ...purchase,
-        credit,
-        farmer,
-      };
-    });
+  // Load company profile and purchases from backend
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
 
-  // Filter purchases
-  const filteredPurchases = purchases.filter((purchase) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      purchase.farmer?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      purchase.credit?.practiceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      purchase.id.toLowerCase().includes(searchQuery.toLowerCase());
+        const [profileData, purchaseData] = await Promise.all([
+          profileAPI.getProfile(),
+          companyAPI.getMyPurchases(),
+        ]);
 
-    const matchesStatus =
-      filterStatus === "all" || purchase.status === filterStatus;
-
-    const matchesType =
-      filterType === "all" || purchase.credit?.practiceType === filterType;
-
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
-  // Calculate totals
-  const totalPurchases = purchases?.length || 0;
-  const totalCredits = purchases?.reduce((sum, p) => sum + (p.credits || 0), 0) || 0;
-  const totalSpent = purchases?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-  const totalCO2 = purchases?.reduce((sum, p) => sum + ((p.credits || 0) * 1), 0) || 0;
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: string; label: string }> = {
-      completed: { variant: "default", label: "Completed" },
-      pending: { variant: "secondary", label: "Pending" },
-      verified: { variant: "default", label: "Verified" },
+        setCompany(profileData);
+        setPurchases(purchaseData || []);
+      } catch (error: any) {
+        console.error(error);
+        toast({
+          title: "Error loading purchases",
+          description:
+            error?.message ||
+            "We couldn't load your purchase history. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    const config = variants[status] || variants.completed;
+    load();
+  }, []);
+
+  // Derive helper values from each purchase so filters are easier
+  const normalizedPurchases = useMemo(() => {
+    return purchases.map((p) => {
+      const credits =
+        p.creditsPurchased ?? p.credits ?? p.quantity ?? p.totalCredits ?? 0;
+      const amount =
+        p.totalAmount ?? p.amount ?? credits * (p.pricePerCredit || 0);
+
+      const practiceType =
+        p.practiceType ?? p.creditType ?? p.credit?.practiceType ?? "";
+      const location = p.location ?? p.state ?? p.credit?.location ?? "";
+
+      const farmerName = p.farmerName ?? p.farmer?.name ?? "Farmer";
+      const farmerAvatar = p.farmerAvatar ?? p.farmer?.avatar;
+
+      const id = p.transactionId ?? p.id ?? p._id ?? "";
+      const dateStr = p.date ?? p.createdAt ?? "";
+
+      return {
+        raw: p,
+        id,
+        dateStr,
+        credits,
+        amount,
+        status: p.status ?? "completed",
+        practiceType,
+        location,
+        farmerName,
+        farmerAvatar,
+      };
+    });
+  }, [purchases]);
+
+  // Filtered list
+  const filteredPurchases = useMemo(() => {
+    return normalizedPurchases.filter((purchase) => {
+      const q = searchQuery.toLowerCase();
+
+      const matchesSearch =
+        q === "" ||
+        purchase.farmerName.toLowerCase().includes(q) ||
+        purchase.practiceType.toLowerCase().includes(q) ||
+        purchase.id.toLowerCase().includes(q);
+
+      const matchesStatus =
+        filterStatus === "all" ||
+        purchase.status.toLowerCase() === filterStatus.toLowerCase();
+
+      const matchesType =
+        filterType === "all" ||
+        purchase.practiceType.toLowerCase() === filterType.toLowerCase();
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [normalizedPurchases, searchQuery, filterStatus, filterType]);
+
+  // Totals
+  const totalPurchases = normalizedPurchases.length;
+  const totalCredits = normalizedPurchases.reduce(
+    (sum, p) => sum + (p.credits || 0),
+    0
+  );
+  const totalSpent = normalizedPurchases.reduce(
+    (sum, p) => sum + (p.amount || 0),
+    0
+  );
+  // very rough CO2 estimate: 1 ton per credit
+  const totalCO2 = totalCredits;
+
+  const getStatusBadge = (status: string) => {
+    const normalized = status?.toLowerCase() || "completed";
+
+    const variants: Record<
+      string,
+      { variant: "default" | "secondary" | "outline"; label: string }
+    > = {
+      completed: { variant: "default", label: "Completed" },
+      success: { variant: "default", label: "Completed" },
+      verified: { variant: "default", label: "Verified" },
+      pending: { variant: "secondary", label: "Pending" },
+    };
+
+    const config = variants[normalized] || variants.completed;
+
     return (
       <Badge
-        variant={config.variant as any}
+        variant={config.variant}
         className={
-          status === "completed"
+          normalized === "completed" || normalized === "success"
             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
             : ""
         }
@@ -109,12 +225,29 @@ const CompanyPurchases = () => {
     );
   };
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   return (
-    <DashboardLayout navItems={navItems} userType="company" userName="EcoTech Industries">
+    <DashboardLayout
+      navItems={navItems}
+      userType="company"
+      userName={company?.name || "Company"}
+    >
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">My Purchases</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            My Purchases
+          </h1>
           <p className="text-muted-foreground">
             View and manage your carbon credit purchase history
           </p>
@@ -128,7 +261,9 @@ const CompanyPurchases = () => {
                 <ShoppingBag className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{totalPurchases}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {totalPurchases}
+                </p>
                 <p className="text-sm text-muted-foreground">Total Purchases</p>
               </div>
             </div>
@@ -143,7 +278,9 @@ const CompanyPurchases = () => {
                 <p className="text-2xl font-bold text-foreground">
                   {totalCredits.toLocaleString()}
                 </p>
-                <p className="text-sm text-muted-foreground">Credits Purchased</p>
+                <p className="text-sm text-muted-foreground">
+                  Credits Purchased
+                </p>
               </div>
             </div>
           </div>
@@ -212,14 +349,26 @@ const CompanyPurchases = () => {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="Organic Farming">Organic Farming</SelectItem>
-                <SelectItem value="No-Till Agriculture">No-Till Agriculture</SelectItem>
+                <SelectItem value="No-Till Agriculture">
+                  No-Till Agriculture
+                </SelectItem>
                 <SelectItem value="Agroforestry">Agroforestry</SelectItem>
                 <SelectItem value="Regenerative">Regenerative</SelectItem>
               </SelectContent>
             </Select>
 
             {/* Download All Button */}
-            <Button variant="outline" className="gap-2">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() =>
+                toast({
+                  title: "Export coming soon",
+                  description:
+                    "CSV export of purchases will be added in the next version.",
+                })
+              }
+            >
               <Download className="w-4 h-4" />
               Export All
             </Button>
@@ -244,13 +393,28 @@ const CompanyPurchases = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPurchases.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12">
+                      <p className="text-muted-foreground">
+                        Loading purchases...
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPurchases.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <ShoppingBag className="w-12 h-12 text-muted-foreground/50" />
-                        <p className="text-muted-foreground">No purchases found</p>
-                        <Button variant="outline" size="sm" asChild className="mt-2">
+                        <p className="text-muted-foreground">
+                          No purchases found
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="mt-2"
+                        >
                           <Link to="/marketplace">Browse Marketplace</Link>
                         </Button>
                       </div>
@@ -258,57 +422,78 @@ const CompanyPurchases = () => {
                   </TableRow>
                 ) : (
                   filteredPurchases.map((purchase) => (
-                    <TableRow key={purchase.id} className="hover:bg-muted/30">
+                    <TableRow
+                      key={purchase.id || purchase.raw._id}
+                      className="hover:bg-muted/30"
+                    >
                       <TableCell className="font-mono text-sm">
-                        #{purchase.id.slice(0, 8)}
+                        #{(purchase.id || "").toString().slice(0, 8)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {new Date(purchase.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
+                          {formatDate(purchase.dateStr)}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <img
-                            src={purchase.farmer?.avatar}
-                            alt={purchase.farmer?.name}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
+                          {purchase.farmerAvatar ? (
+                            <img
+                              src={purchase.farmerAvatar}
+                              alt={purchase.farmerName}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                              {purchase.farmerName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </div>
+                          )}
                           <span className="font-medium">
-                            {purchase.farmer?.name}
+                            {purchase.farmerName}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="text-sm">{purchase.credit?.practiceType}</span>
+                          <span className="text-sm">
+                            {purchase.practiceType || "—"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="w-4 h-4" />
-                          {purchase.credit?.location}
+                          {purchase.location || "—"}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {purchase.credits?.toLocaleString() || 0} credits
+                        {purchase.credits.toLocaleString()} credits
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ₹{purchase.amount.toLocaleString()}
                       </TableCell>
-                      <TableCell>{getStatusBadge(purchase.status)}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(purchase.status || "completed")}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-8 gap-1"
+                            onClick={() =>
+                              toast({
+                                title: "Download coming soon",
+                                description:
+                                  "Detailed transaction reports will be downloadable soon.",
+                              })
+                            }
                           >
                             <Download className="w-3.5 h-3.5" />
                             Report
@@ -331,7 +516,7 @@ const CompanyPurchases = () => {
         </div>
 
         {/* Results Count */}
-        {filteredPurchases.length > 0 && (
+        {!isLoading && filteredPurchases.length > 0 && (
           <div className="flex items-center justify-between text-sm text-muted-foreground px-2">
             <p>
               Showing {filteredPurchases.length} of {totalPurchases} purchases

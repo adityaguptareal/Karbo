@@ -1,8 +1,12 @@
+// src/components/company/CompanyImpactReport.tsx
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
 import { DashboardLayout } from "../layout/DashboardLayout";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
-import { allTransactions, companies } from "@/data/mockData";
+
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -21,46 +25,165 @@ import {
   Award,
   CheckCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+
+import { toast } from "@/hooks/use-toast";
+import { profileAPI, companyAPI, type UserProfile } from "@/services/api";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+  { label: "Marketplace", href: "/company/marketplace", icon: ShoppingBag },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
   { label: "Settings", href: "/company/settings", icon: Settings },
 ];
 
-const currentCompany = companies[1]; // c2 - Green Manufacturing Co.
+interface Purchase {
+  _id?: string;
+  id?: string;
+  transactionId?: string;
+
+  date?: string;
+  createdAt?: string;
+
+  creditsPurchased?: number;
+  credits?: number;
+  quantity?: number;
+  totalCredits?: number;
+
+  totalAmount?: number;
+  amount?: number;
+  pricePerCredit?: number;
+
+  status?: string;
+
+  practiceType?: string;
+  creditType?: string;
+
+  location?: string;
+  state?: string;
+
+  credit?: {
+    practiceType?: string;
+    location?: string;
+  };
+
+  [key: string]: any;
+}
+
+interface PracticeBucket {
+  type: string;
+  credits: number;
+  percentage: number;
+  color: string;
+}
+
+const practiceColors = [
+  "bg-emerald-500",
+  "bg-green-500",
+  "bg-teal-500",
+  "bg-cyan-500",
+  "bg-lime-500",
+  "bg-green-400",
+];
 
 const CompanyImpactReport = () => {
-  // Get all purchase transactions for this company
-  const purchases = allTransactions.filter(
-    (t) => t.type === "purchase" && t.companyId === "c2"
-  );
+  const [company, setCompany] = useState<UserProfile | null>(null);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Calculate metrics
-  const totalCredits = purchases.reduce((sum, p) => sum + (p.credits || 0), 0);
-  const totalCO2Offset = totalCredits; // 1 credit = 1 ton CO2
-  const treesEquivalent = totalCO2Offset * 50;
-  const carsOffRoad = Math.round(totalCO2Offset * 2.5);
-  const homesEnergy = Math.round(totalCO2Offset * 0.8);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true);
 
-  // Monthly data (example - you can enhance this)
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const monthlyCredits = [450, 520, 680, 750, 820, 680];
+        const [profileData, purchaseData] = await Promise.all([
+          profileAPI.getProfile(),
+          companyAPI.getMyPurchases(),
+        ]);
 
-  // Breakdown by practice type
-  const practiceBreakdown = [
-    { type: "Organic Farming", credits: 850, percentage: 22, color: "bg-emerald-500" },
-    { type: "Agroforestry", credits: 1250, percentage: 32, color: "bg-green-500" },
-    { type: "No-Till Agriculture", credits: 600, percentage: 15, color: "bg-teal-500" },
-    { type: "Stubble Burning Avoidance", credits: 600, percentage: 15, color: "bg-cyan-500" },
-    { type: "Regenerative Grazing", credits: 400, percentage: 10, color: "bg-lime-500" },
-    { type: "Other Practices", credits: 200, percentage: 6, color: "bg-green-400" },
-  ];
+        setCompany(profileData);
+        setPurchases(purchaseData || []);
+      } catch (error: any) {
+        console.error(error);
+        toast({
+          title: "Error loading impact report",
+          description:
+            error?.message ||
+            "We couldn't load your impact report. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // SDG Goals alignment
+    load();
+  }, []);
+
+  // Normalise data + compute totals and breakdowns
+  const {
+    totalCredits,
+    totalCO2Offset,
+    treesEquivalent,
+    carsOffRoad,
+    homesEnergy,
+    practiceBreakdown,
+  } = useMemo(() => {
+    if (!purchases || purchases.length === 0) {
+      return {
+        totalCredits: 0,
+        totalCO2Offset: 0,
+        treesEquivalent: 0,
+        carsOffRoad: 0,
+        homesEnergy: 0,
+        practiceBreakdown: [] as PracticeBucket[],
+      };
+    }
+
+    const creditsPerPurchase = purchases.map((p) => {
+      const credits =
+        p.creditsPurchased ?? p.credits ?? p.quantity ?? p.totalCredits ?? 0;
+      const practice =
+        p.practiceType ?? p.creditType ?? p.credit?.practiceType ?? "Other";
+      return { credits, practice };
+    });
+
+    const totalCredits = creditsPerPurchase.reduce(
+      (sum, p) => sum + p.credits,
+      0
+    );
+
+    const totalCO2Offset = totalCredits; // 1 credit = 1 ton CO2 (simple assumption)
+    const treesEquivalent = totalCO2Offset * 50;
+    const carsOffRoad = Math.round(totalCO2Offset * 2.5);
+    const homesEnergy = Math.round(totalCO2Offset * 0.8);
+
+    // Group by practice type
+    const map = new Map<string, number>();
+    for (const { practice, credits } of creditsPerPurchase) {
+      map.set(practice, (map.get(practice) || 0) + credits);
+    }
+
+    const buckets: PracticeBucket[] = Array.from(map.entries())
+      .map(([type, credits], index) => ({
+        type,
+        credits,
+        percentage: totalCredits === 0 ? 0 : Math.round((credits / totalCredits) * 100),
+        color: practiceColors[index % practiceColors.length],
+      }))
+      .sort((a, b) => b.credits - a.credits);
+
+    return {
+      totalCredits,
+      totalCO2Offset,
+      treesEquivalent,
+      carsOffRoad,
+      homesEnergy,
+      practiceBreakdown: buckets,
+    };
+  }, [purchases]);
+
+  // Static SDG progress (you can later compute these from real data if you want)
   const sdgGoals = [
     { goal: "Climate Action", icon: Globe, progress: 85 },
     { goal: "Zero Hunger", icon: Leaf, progress: 70 },
@@ -68,11 +191,25 @@ const CompanyImpactReport = () => {
     { goal: "Clean Water", icon: Droplets, progress: 65 },
   ];
 
+  if (isLoading) {
+    return (
+      <DashboardLayout
+        navItems={navItems}
+        userType="company"
+        userName={company?.name || "Company"}
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading impact report...</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentCompany.name}
+      userName={company?.name || "Company"}
     >
       <div className="space-y-6">
         {/* Header */}
@@ -85,7 +222,16 @@ const CompanyImpactReport = () => {
               Comprehensive analysis of your carbon offset initiatives
             </p>
           </div>
-          <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+          <Button
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            onClick={() =>
+              toast({
+                title: "Download coming soon",
+                description:
+                  "PDF export of the impact report will be available in the next version.",
+              })
+            }
+          >
             <Download className="w-4 h-4" />
             Download Full Report
           </Button>
@@ -106,6 +252,7 @@ const CompanyImpactReport = () => {
               </p>
               <p className="text-sm text-muted-foreground">Tons CO₂ Offset</p>
               <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+                {/* Placeholder trend text – can be made real with month-on-month data */}
                 +15.3% from last quarter
               </p>
             </CardContent>
@@ -170,40 +317,48 @@ const CompanyImpactReport = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {practiceBreakdown.map((practice) => (
-                  <div key={practice.type}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${practice.color}`}
-                        />
-                        <span className="text-sm font-medium">
-                          {practice.type}
-                        </span>
+              {practiceBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No purchases yet – buy credits to see your impact breakdown.
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {practiceBreakdown.map((practice) => (
+                      <div key={practice.type}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-3 h-3 rounded-full ${practice.color}`}
+                            />
+                            <span className="text-sm font-medium">
+                              {practice.type}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-muted-foreground">
+                              {practice.credits.toLocaleString()} credits
+                            </span>
+                            <span className="text-sm font-semibold w-12 text-right">
+                              {practice.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                        <Progress value={practice.percentage} className="h-2" />
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm text-muted-foreground">
-                          {practice.credits.toLocaleString()} credits
-                        </span>
-                        <span className="text-sm font-semibold w-12 text-right">
-                          {practice.percentage}%
-                        </span>
-                      </div>
-                    </div>
-                    <Progress value={practice.percentage} className="h-2" />
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              <div className="mt-6 pt-6 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total Credits</span>
-                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {totalCredits.toLocaleString()}
-                  </span>
-                </div>
-              </div>
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Total Credits</span>
+                      <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                        {totalCredits.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -254,9 +409,9 @@ const CompanyImpactReport = () => {
                 </h3>
                 <p className="text-muted-foreground mb-4">
                   Your organization has successfully offset{" "}
-                  {totalCO2Offset.toLocaleString()} tons of CO₂ through
-                  verified carbon credits, contributing to global climate action
-                  and sustainable development.
+                  {totalCO2Offset.toLocaleString()} tons of CO₂ through verified
+                  carbon credits, contributing to global climate action and
+                  sustainable development.
                 </p>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <div className="flex items-center gap-2">
@@ -265,11 +420,28 @@ const CompanyImpactReport = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4 text-muted-foreground" />
-                    <span>Certificate ID: #CC-2024-{currentCompany.id.toUpperCase()}</span>
+                    <span>
+                      Certificate ID: #CC-2024-
+                      {(company?.email || company?.name || "ORG")
+                        .toString()
+                        .replace(/[^A-Za-z0-9]/g, "")
+                        .toUpperCase()}
+                    </span>
+
                   </div>
                 </div>
               </div>
-              <Button variant="outline" className="gap-2">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() =>
+                  toast({
+                    title: "Download coming soon",
+                    description:
+                      "You will soon be able to download an official certificate PDF.",
+                  })
+                }
+              >
                 <Download className="w-4 h-4" />
                 Download Certificate
               </Button>
@@ -341,13 +513,8 @@ const CompanyImpactReport = () => {
                   Offset more carbon and increase your environmental impact
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                size="lg"
-                className="gap-2"
-                asChild
-              >
-                <Link to="/marketplace">
+              <Button variant="secondary" size="lg" className="gap-2" asChild>
+                <Link to="/company/marketplace">
                   Browse Carbon Credits
                   <TrendingUp className="w-4 h-4" />
                 </Link>
