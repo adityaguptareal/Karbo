@@ -48,6 +48,15 @@ import {
 import { adminAPI } from "@/services/api";
 import { toast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const adminNavItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -70,6 +79,15 @@ export default function AdminUsers() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const debouncedSearch = useDebounce(search, 500);
+
+    // Add Admin Dialog State
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [adminForm, setAdminForm] = useState({
+        name: "",
+        email: "",
+        password: ""
+    });
 
     const fetchUsers = async () => {
         setIsLoading(true);
@@ -121,18 +139,60 @@ export default function AdminUsers() {
         }
     };
 
+    const handleCreateAdmin = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!adminForm.name || !adminForm.email || !adminForm.password) {
+            toast({
+                title: "Validation Error",
+                description: "Please fill in all fields",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        if (adminForm.password.length < 6) {
+            toast({
+                title: "Validation Error",
+                description: "Password must be at least 6 characters",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsCreating(true);
+        try {
+            const response = await adminAPI.createAdmin(adminForm);
+            toast({
+                title: "Success",
+                description: response.msg || "Admin user created successfully"
+            });
+            setIsDialogOpen(false);
+            setAdminForm({ name: "", email: "", password: "" });
+            fetchUsers();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.response?.data?.msg || error.message || "Failed to create admin",
+                variant: "destructive"
+            });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
     return (
         <DashboardLayout
             navItems={adminNavItems}
             userType="admin"
-            >
+        >
             <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-display font-bold text-foreground">User Management</h1>
                         <p className="text-muted-foreground mt-2">Manage user accounts and permissions.</p>
                     </div>
-                    <Button>
+                    <Button onClick={() => setIsDialogOpen(true)}>
                         <Shield className="w-4 h-4 mr-2" />
                         Add Admin User
                     </Button>
@@ -312,6 +372,81 @@ export default function AdminUsers() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Add Admin Dialog */}
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Add New Admin User</DialogTitle>
+                            <DialogDescription>
+                                Create a new admin account. This user will have full administrative privileges.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateAdmin}>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="name">Full Name</Label>
+                                    <Input
+                                        id="name"
+                                        placeholder="John Doe"
+                                        value={adminForm.name}
+                                        onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                                        disabled={isCreating}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="admin@example.com"
+                                        value={adminForm.email}
+                                        onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                                        disabled={isCreating}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="Min. 6 characters"
+                                        value={adminForm.password}
+                                        onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                                        disabled={isCreating}
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsDialogOpen(false)}
+                                    disabled={isCreating}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isCreating}>
+                                    {isCreating ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Creating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Shield className="w-4 h-4 mr-2" />
+                                            Create Admin
+                                        </>
+                                    )}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </DashboardLayout>
     );

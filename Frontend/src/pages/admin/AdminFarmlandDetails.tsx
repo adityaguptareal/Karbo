@@ -231,7 +231,7 @@ export default function AdminFarmlandDetails() {
                                     <label className="text-sm font-medium text-muted-foreground">Area</label>
                                     <div className="flex items-center gap-2 mt-1">
                                         <Maximize className="w-4 h-4 text-muted-foreground" />
-                                        <span>{farmland.area} acres</span>
+                                        <span>{(farmland.area * 0.404686).toFixed(2)} ha</span>
                                     </div>
                                 </div>
                                 <div>
@@ -375,7 +375,7 @@ export default function AdminFarmlandDetails() {
                         <CardContent className="space-y-4">
                             <div className="p-4 bg-muted/50 rounded-lg">
                                 <div className="text-sm text-muted-foreground">Total Area</div>
-                                <div className="text-2xl font-bold mt-1">{farmland.area} acres</div>
+                                <div className="text-2xl font-bold mt-1">{(farmland.area * 0.404686).toFixed(2)} ha</div>
                             </div>
 
                             <div className="p-4 bg-muted/50 rounded-lg">

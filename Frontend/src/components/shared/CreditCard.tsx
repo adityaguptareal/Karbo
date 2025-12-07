@@ -15,9 +15,9 @@ interface CreditCardProps {
       landName: string;
       location: string;
       area: number;
-      landImages: string[];
-      landType: string;
-      cultivationMethod: string;
+      landImages?: string[];
+      landType?: string;
+      cultivationMethod?: string;
     };
     farmerId: {
       name: string;
@@ -56,7 +56,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
                     {credit.farmlandId.landName}
                   </h3>
                   <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600">
-                    {credit.farmlandId.landType}
+                    {credit.farmlandId.landType || 'Farmland'}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
@@ -125,7 +125,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
         />
         <div className="absolute top-3 right-3">
           <Badge variant="outline" className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-emerald-500 text-emerald-600">
-            {credit.farmlandId.landType}
+            {credit.farmlandId.landType || 'Farmland'}
           </Badge>
         </div>
         <div className="absolute bottom-3 left-3">
@@ -162,7 +162,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Leaf className="w-4 h-4 text-emerald-600" />
-            <span className="font-medium text-foreground">{credit.farmlandId.cultivationMethod}</span>
+            <span className="font-medium text-foreground">{credit.farmlandId.cultivationMethod || 'Sustainable'}</span>
           </div>
         </div>
 

@@ -214,7 +214,7 @@ export default function AdminVerificationDetails() {
                                             <label className="text-sm font-medium text-muted-foreground">Area</label>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <Tractor className="w-4 h-4 text-muted-foreground" />
-                                                <span>{data.area} Acres</span>
+                                                <span>{(data.area * 0.404686).toFixed(2)} ha</span>
                                             </div>
                                         </div>
                                         <div>

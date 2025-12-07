@@ -101,7 +101,7 @@ export default function AdminFarmlands() {
         <DashboardLayout
             navItems={adminNavItems}
             userType="admin"
-            >
+        >
             <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between">
                     <div>
@@ -188,7 +188,7 @@ export default function AdminFarmlands() {
                                                     <TableCell>
                                                         <div className="flex items-center gap-1">
                                                             <Maximize className="w-3 h-3" />
-                                                            <span>{farmland.area} acres</span>
+                                                            <span>{(farmland.area * 0.404686).toFixed(2)} ha</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>

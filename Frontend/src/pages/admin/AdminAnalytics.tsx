@@ -101,12 +101,11 @@ export default function AdminAnalytics() {
                             </div>
                         </CardContent>
                     </Card>
-
                     {/* Revenue Chart */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <DollarSign className="w-5 h-5 text-primary" />
+                               
                                 Revenue Growth
                             </CardTitle>
                             <CardDescription>Total platform revenue over time</CardDescription>
@@ -119,7 +118,7 @@ export default function AdminAnalytics() {
                                         <XAxis dataKey="month" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="revenue" fill="#22c55e" name="Revenue ($)" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="revenue" fill="#22c55e" name="Revenue (₹)" radius={[4, 4, 0, 0]} />
                                     </RechartsBarChart>
                                 </ResponsiveContainer>
                             </div>

@@ -31,12 +31,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
-import { 
-  Search, 
-  SlidersHorizontal, 
-  Grid3X3, 
-  List, 
-  ShoppingCart, 
+import {
+  Search,
+  SlidersHorizontal,
+  Grid3X3,
+  List,
+  ShoppingCart,
   Trash2,
   LayoutDashboard,
   FileText,
@@ -64,6 +64,9 @@ interface CarbonListing {
     landName: string;
     location: string;
     area: number;
+    landImages?: string[];
+    landType?: string;
+    cultivationMethod?: string;
   };
   farmerId: {
     name: string;
@@ -114,24 +117,24 @@ const CompanyMarketplace = () => {
 
   // Fetch user verification status
   const fetchVerificationStatus = async () => {
-  console.log('🚀 Starting fetchVerificationStatus...'); // ✅ Add this
+    console.log('🚀 Starting fetchVerificationStatus...'); // ✅ Add this
     try {
       const token = localStorage.getItem('token');
       console.log('🔑 Token:', token ? 'exists' : 'missing'); // ✅ Add this
-      
+
       const response = await axios.get(`${API_BASE_URL}/profile/me`, {
-          headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       console.log('📡 Response status:', response.status);
-      
+
       const data = await response.data.user;
       console.log('📦 Full response:', data);
 
       if (data) {
         const status = data.status || 'not_submitted';
         setIsVerified(status === 'verified');
-        
+
         console.log('✅ Setting state - Status:', status, 'IsVerified:', isVerified);
       }
     } catch (error) {
@@ -161,13 +164,12 @@ const CompanyMarketplace = () => {
     fetchUserName();
   }, []);
 
-  console.log(currentUser.name)
 
   // Fetch listings from backend
   const fetchListings = async () => {
     try {
       setLoading(true);
-      
+
       const filters = {
         search: searchQuery || undefined,
         minPrice: priceRange[0],
@@ -181,16 +183,16 @@ const CompanyMarketplace = () => {
           sortBy === "newest"
             ? "newest"
             : sortBy === "price-low"
-            ? "price_low"
-            : sortBy === "price-high"
-            ? "price_high"
-            : "newest",
+              ? "price_low"
+              : sortBy === "price-high"
+                ? "price_high"
+                : "newest",
         page: currentPage,
         limit: 20,
       };
 
       const response = await marketplaceService.getListings(filters);
-      
+
       setListings(response.listings || []);
       setTotalListings(response.total || 0);
       setTotalPages(response.pages || 1);
@@ -287,14 +289,14 @@ const CompanyMarketplace = () => {
   };
 
   const hasActiveFilters =
-  searchQuery ||
-  priceRange[0] > 0 ||
-  priceRange[1] < 1000 ||
-  minArea ||
-  maxArea ||
-  location ||
-  minCredits ||
-  maxCredits;
+    searchQuery ||
+    priceRange[0] > 0 ||
+    priceRange[1] < 1000 ||
+    minArea ||
+    maxArea ||
+    location ||
+    minCredits ||
+    maxCredits;
 
   const handleCheckout = () => {
     if (cart.length === 0) {
@@ -315,7 +317,6 @@ const CompanyMarketplace = () => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser.name}
     >
       <div className="space-y-6">
         {/* Verification Alert Banner */}
@@ -328,16 +329,16 @@ const CompanyMarketplace = () => {
                   Account Verification Required
                 </h3>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
-                  {verificationStatus === 'not_submitted' && 
+                  {verificationStatus === 'not_submitted' &&
                     "You need to verify your company to purchase carbon credits. Please submit your documents."}
                   {verificationStatus === 'pending_verification' && // ✅ Changed from 'pending'
                     "Your verification is pending approval. You'll be able to purchase once verified."}
-                  {verificationStatus === 'rejected' && 
+                  {verificationStatus === 'rejected' &&
                     "Your verification was rejected. Please resubmit with correct documents."}
                 </p>
                 {verificationStatus !== 'pending_verification' && ( // ✅ Changed from 'pending'
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => navigate('/company/settings')}
                     className="bg-yellow-600 hover:bg-yellow-700"
                   >
@@ -361,7 +362,7 @@ const CompanyMarketplace = () => {
               Browse {totalListings} verified credits from sustainable farms worldwide
             </p>
           </div>
-          
+
           {/* Cart Button */}
           <Sheet open={cartOpen} onOpenChange={setCartOpen}>
             <SheetTrigger asChild>
@@ -382,7 +383,7 @@ const CompanyMarketplace = () => {
                   Your Cart
                 </SheetTitle>
               </SheetHeader>
-              
+
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                   <ShoppingCart className="w-16 h-16 text-muted-foreground mb-4" />
@@ -405,8 +406,8 @@ const CompanyMarketplace = () => {
                         <p className="font-semibold text-foreground">
                           ₹{(item.credit.totalValue).toFixed(2)}
                         </p>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive"
                           onClick={() => removeFromCart(item.credit._id)}
@@ -416,7 +417,7 @@ const CompanyMarketplace = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   <div className="border-t border-border pt-4 mt-4">
                     <div className="flex justify-between mb-2">
                       <span className="text-muted-foreground">Total Credits</span>
@@ -430,8 +431,8 @@ const CompanyMarketplace = () => {
                       <span>Total</span>
                       <span className="text-emerald-600 dark:text-emerald-400">₹{cartTotal.toFixed(2)}</span>
                     </div>
-                    <Button 
-                      className="w-full bg-emerald-600 hover:bg-emerald-700" 
+                    <Button
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
                       size="lg"
                       onClick={handleCheckout}
                     >
@@ -458,11 +459,11 @@ const CompanyMarketplace = () => {
                   You need to verify your company account before purchasing carbon credits.
                 </p>
                 <p className="font-medium">
-                  {verificationStatus === 'not_submitted' && 
+                  {verificationStatus === 'not_submitted' &&
                     "Please submit your company documents to start the verification process."}
-                  {verificationStatus === 'pending' && 
+                  {verificationStatus === 'pending' &&
                     "Your verification is currently being reviewed by our team."}
-                  {verificationStatus === 'rejected' && 
+                  {verificationStatus === 'rejected' &&
                     "Your previous verification was rejected. Please resubmit with correct documents."}
                 </p>
               </AlertDialogDescription>
@@ -646,14 +647,14 @@ const CompanyMarketplace = () => {
               </div>
             ) : (
               <>
-                <div className={viewMode === 'grid' 
-                  ? "grid grid-cols-1 md:grid-cols-2 gap-6" 
+                <div className={viewMode === 'grid'
+                  ? "grid grid-cols-1 md:grid-cols-2 gap-6"
                   : "space-y-4"
                 }>
                   {listings.map(credit => (
-                    <CreditCard 
-                      key={credit._id} 
-                      credit={credit} 
+                    <CreditCard
+                      key={credit._id}
+                      credit={credit}
                       viewMode={viewMode}
                       onAddToCart={addToCart}
                     />

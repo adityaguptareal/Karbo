@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,45 @@ const Login = () => {
     password: "",
     remember: false
   });
+
+  // Check if user is already logged in with valid token
+  useEffect(() => {
+    const verifyToken = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        return; // No token, stay on login page
+      }
+
+      try {
+        // Verify token by fetching user profile
+        const response = await import("@/services/api").then(m =>
+          m.profileAPI.getProfile()
+        );
+
+        const user = response.user;
+        const userRole = user?.role;
+
+        // If token is valid, redirect to respective dashboard
+        if (userRole === 'farmer') {
+          navigate('/farmer/dashboard', { replace: true });
+        } else if (userRole === 'company') {
+          navigate('/company/dashboard', { replace: true });
+        } else if (userRole === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      } catch (error) {
+        // Token is invalid or expired, clear it
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("role");
+      }
+    };
+
+    verifyToken();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

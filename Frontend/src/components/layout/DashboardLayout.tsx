@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, Bell, User, ChevronDown, LogOut, Settings, Home } from "lucide-react";
@@ -36,6 +36,7 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   // from useAuth
   const { firstName, isLoading } = useAuth();
@@ -51,8 +52,11 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
       const notifs = response.data.notifications || [];
       setNotifications(notifs);
       setUnreadCount(notifs.filter((n: Notification) => !n.isRead).length);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
+    } catch (error: any) {
+      // Silently fail if notifications endpoint doesn't exist (404)
+      if (error.response?.status !== 404) {
+        console.error("Error fetching notifications:", error);
+      }
     }
   };
 
@@ -65,8 +69,11 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchNotifications();
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
+    } catch (error: any) {
+      // Silently fail if notifications endpoint doesn't exist (404)
+      if (error.response?.status !== 404) {
+        console.error("Error marking notification as read:", error);
+      }
     }
   };
 
@@ -92,6 +99,16 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleLogout = () => {
+    // Clear all authentication data from localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("role");
+
+    // Redirect to home page
+    navigate("/", { replace: true });
+  };
 
   const userTypeColors = {
     farmer: "bg-primary",
@@ -196,11 +213,9 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem asChild>
-                  <Link to="/login" className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </Link>
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

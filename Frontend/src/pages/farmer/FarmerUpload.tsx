@@ -54,8 +54,14 @@ export default function FarmerUpload() {
     try {
       setLoading(true);
 
+      // Convert hectares to acres for backend (1 ha = 2.47105 acres)
+      const payloadInAcres = {
+        ...payload,
+        area: (Number(payload.area) * 2.47105).toString()
+      };
+
       const res = await farmerApi.createFarmland(
-        payload,
+        payloadInAcres,
         documents,
         images
       );
@@ -91,7 +97,7 @@ export default function FarmerUpload() {
   };
 
   return (
-    <DashboardLayout navItems={navItems} userName="Farmer" userType="farmer">
+    <DashboardLayout navItems={navItems} userType="farmer">
       <div className="max-w-2xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold">Upload Farmland Documents</h1>
 
@@ -117,7 +123,7 @@ export default function FarmerUpload() {
           </div>
 
           <div>
-            <Label>Area (in acres)</Label>
+            <Label>Area (in hectares)</Label>
             <Input
               value={payload.area}
               type="number"

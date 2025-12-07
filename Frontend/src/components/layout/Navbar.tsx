@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, User, LogOut, ChevronDown, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,6 +16,7 @@ export function Navbar({
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { firstName, isLoading } = useAuth();
 
   const navLinks = [{
@@ -40,6 +41,16 @@ export function Navbar({
       default:
         return '/';
     }
+  };
+
+  const handleLogout = () => {
+    // Clear all authentication data from localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("role");
+
+    // Redirect to home page
+    navigate("/", { replace: true });
   };
 
   const displayName = isLoading ? 'Loading...' : (firstName || 'User');
@@ -89,11 +100,9 @@ export function Navbar({
                   <Link to="/settings">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/login" className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </Link>
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -124,9 +133,9 @@ export function Navbar({
             <Link to={getDashboardLink()} className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted" onClick={() => setMobileMenuOpen(false)}>
               Dashboard
             </Link>
-            <Link to="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-muted" onClick={() => setMobileMenuOpen(false)}>
+            <button onClick={() => { setMobileMenuOpen(false); handleLogout(); }} className="px-4 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-muted text-left w-full">
               Logout
-            </Link>
+            </button>
           </> : <div className="flex flex-col gap-2 px-4">
             <Button variant="outline" asChild>
               <Link to="/login">Login</Link>

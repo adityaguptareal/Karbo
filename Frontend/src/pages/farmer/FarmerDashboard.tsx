@@ -89,7 +89,7 @@ const FarmerDashboard = () => {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={navItems} userType="farmer" userName="Farmer">
+      <DashboardLayout navItems={navItems} userType="farmer">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
@@ -101,7 +101,6 @@ const FarmerDashboard = () => {
     <DashboardLayout
       navItems={navItems}
       userType="farmer"
-      userName={profile?.name || "Farmer"}
     >
       <div className="space-y-8">
         {/* Header */}
@@ -162,8 +161,8 @@ const FarmerDashboard = () => {
 
           <StatsCard
             title="Total Area"
-            value={String(totalArea)}
-            subtitle="Acres registered"
+            value={`${(totalArea * 0.404686).toFixed(2)} ha`}
+            subtitle="Hectares registered"
             icon={TrendingUp}
             variant="secondary"
           />
@@ -225,7 +224,7 @@ const FarmerDashboard = () => {
                           {farm.location}
                         </p>
                         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                          <span>{farm.area} acres</span>
+                          <span>{(Number(farm.area) * 0.404686).toFixed(2)} ha</span>
                           <span>•</span>
                           <span>{farm.landType}</span>
                         </div>

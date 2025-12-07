@@ -268,7 +268,7 @@ const getAllUsers = async (req, res) => {
     const status = req.query.status || "";
 
     const query = {
-      role: { $in: ["farmer", "company"] }
+      role: { $in: ["farmer", "company", "admin"] }
     };
 
     if (status && status !== "all") {
