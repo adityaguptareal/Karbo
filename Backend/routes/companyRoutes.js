@@ -6,7 +6,7 @@ const isCompany = require("../middleware/isCompany");
 
 const upload = require("../utils/upload");
 
-const { uploadCompanyDocuments } = require("../controllers/companyController");
+const { uploadCompanyDocuments, getCompanyTransactions } = require("../controllers/companyController");
 
 router.use(auth);
 router.use(isCompany);
@@ -16,5 +16,7 @@ router.post(
   upload.fields([{ name: "documents", maxCount: 5 }]),
   uploadCompanyDocuments
 );
+
+router.get("/transactions", getCompanyTransactions);
 
 module.exports = router;

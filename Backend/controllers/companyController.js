@@ -1,6 +1,6 @@
 const User = require("../models/userModel");
 const upload = require("../utils/upload"); 
-
+const Transaction = require("../models/transactionModel");
 
 exports.uploadCompanyDocuments = async (req, res) => {
   try {
@@ -34,5 +34,45 @@ exports.uploadCompanyDocuments = async (req, res) => {
   } catch (err) {
     console.error("uploadCompanyDocuments error:", err);
     return res.status(500).json({ msg: "Server error", error: err.message });
+  }
+};
+
+// Get all transactions for logged-in company
+exports.getCompanyTransactions = async (req, res) => {
+  try {
+    const companyId = req.user.userId;
+    const { page = 1, limit = 10, sortBy = 'newest' } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    let sortOption = {};
+    if (sortBy === 'newest') sortOption.createdAt = -1;
+    if (sortBy === 'oldest') sortOption.createdAt = 1;
+
+    const transactions = await Transaction.find({ companyId })
+      .populate('farmerId', 'name email')
+      .populate({
+        path: 'carbonCreditListingId',
+        populate: {
+          path: 'farmlandId',
+          select: 'landName location area'
+        }
+      })
+      .sort(sortOption)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Transaction.countDocuments({ companyId });
+
+    return res.status(200).json({
+      msg: "Transactions fetched successfully",
+      transactions,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    console.error("getCompanyTransactions error:", error);
+    return res.status(500).json({ msg: "Server error", error: error.message });
   }
 };
