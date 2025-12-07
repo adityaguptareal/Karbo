@@ -38,10 +38,10 @@ const getMarketplaceListings = async (req, res) => {
     if (sort === "newest") sortOption.createdAt = -1;
     if (sort === "oldest") sortOption.createdAt = 1;
 
-    const listings = await CarbonCredit.find(filter)
-      .populate("farmerId", "name email")
-      .populate("farmlandId", "landName location area")
-      .sort(sortOption)
+const listings = await CarbonCredit.find(filter)
+  .populate("farmerId", "name email")
+  .populate("farmlandId", "landName location area landImages landDocuments landType cultivationMethod")
+  .sort(sortOption)
       .skip((page - 1) * limit)
       .limit(limit);
 
