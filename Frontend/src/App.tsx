@@ -12,6 +12,8 @@ import Marketplace from "./pages/Marketplace";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import FarmerDashboard from "./pages/farmer/FarmerDashboard";
+import FarmerMarketplace from "./pages/farmer/FarmerMarketPlace";
+import FarmerSettings from "./pages/farmer/FarmerSettings";
 import FarmerUpload from "./pages/farmer/FarmerUpload";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -29,6 +31,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminUserDetails from "./pages/admin/AdminUserDetails";
 import AdminFarmlands from "./pages/admin/AdminFarmlands";
 import AdminFarmlandDetails from "./pages/admin/AdminFarmlandDetails";
+import OrderSuccess from "./components/company/OrderSuccess";
 
 const queryClient = new QueryClient();
 
@@ -48,17 +51,18 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Farmer Dashboard Routes */}
+          {/* Farmer Dashboard Routes - Protected */}
           <Route element={<ProtectedRoute allowedRoles={['farmer']} />}>
             <Route path="/farmer/dashboard" element={<FarmerDashboard />} />
+            <Route path="/farmer/marketplace" element={<FarmerMarketplace />} />
             <Route path="/farmer/upload" element={<FarmerUpload />} />
             <Route path="/farmer/credits" element={<FarmerDashboard />} />
             <Route path="/farmer/wallet" element={<FarmerDashboard />} />
             <Route path="/farmer/documents" element={<FarmerDashboard />} />
-            <Route path="/farmer/settings" element={<FarmerDashboard />} />
+            <Route path="/farmer/settings" element={<FarmerSettings />} />
           </Route>
 
-          {/* Company Dashboard Routes */}
+          {/* Company Dashboard Routes - Protected */}
           <Route element={<ProtectedRoute allowedRoles={['company']} />}>
             <Route path="/company/dashboard" element={<CompanyDashboard />} />
             <Route path="/company/marketplace" element={<CompanyMarketplace />} />
@@ -66,9 +70,10 @@ const App = () => (
             <Route path="/company/impact" element={<CompanyImpactReport />} />
             <Route path="/company/settings" element={<CompanySettings />} />
             <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
+            <Route path="/company/order-success" element={<OrderSuccess />} />
           </Route>
 
-          {/* Admin Dashboard Routes */}
+          {/* Admin Dashboard Routes - Protected */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/verification" element={<AdminVerification />} />
