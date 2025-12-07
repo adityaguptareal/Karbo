@@ -41,7 +41,7 @@ export function Footer() {
                 <Leaf className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-semibold">
-                CarbonMarket
+                Karbo
               </span>
             </Link>
             <p className="text-background/70 text-sm mb-6 max-w-xs">
@@ -105,15 +105,15 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-background/70">
                 <MapPin className="w-4 h-4" />
-                San Francisco, CA
+                Greater Noida, IN
               </li>
               <li className="flex items-center gap-2 text-sm text-background/70">
                 <Mail className="w-4 h-4" />
-                hello@carbonmarket.com
+                hello@karbo.com
               </li>
               <li className="flex items-center gap-2 text-sm text-background/70">
                 <Phone className="w-4 h-4" />
-                +1 (555) 123-4567
+                +91 98765 43210
               </li>
             </ul>
           </div>
@@ -122,7 +122,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-background/50">
-            © {currentYear} CarbonMarket. All rights reserved.
+            © {currentYear} Karbo. All rights reserved.
           </p>
           <div className="flex gap-6">
             {footerLinks.legal.map((link) => (

@@ -79,6 +79,7 @@ exports.getAdminDashboard = async (req, res) => {
   try {
     const totalFarmers = await User.countDocuments({ role: "farmer" });
     const totalCompanies = await User.countDocuments({ role: "company" });
+    const totalUsers = totalFarmers + totalCompanies;
 
     const pendingUsers = await User.countDocuments({
       status: "pending_verification",
@@ -89,22 +90,31 @@ exports.getAdminDashboard = async (req, res) => {
       status: "pending_verification",
     });
 
+    const pendingVerifications = pendingUsers + pendingFarmlands;
+
     const transactions = await Transaction.find();
+    const totalSales = transactions.length;
     const totalRevenue = transactions.reduce((s, t) => s + t.amountPaid, 0);
 
     return res.status(200).json({
       msg: "Admin dashboard data fetched",
+      success: true,
       data: {
+        totalUsers,
         totalFarmers,
         totalCompanies,
+        pendingVerifications,
         pendingUsers,
         pendingFarmlands,
-        totalRevenue,
+        totalSales,
+        revenue: totalRevenue,
+        systemHealth: "99.9%", // Mocked for now
+        activeNodes: 8 // Mocked for now
       },
     });
 
   } catch (error) {
     console.error("Admin Dashboard Error:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error.message, success: false });
   }
 };

@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'https://karbo.onrender.com';
+export const BASE_URL = 'http://localhost:3000';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -35,7 +35,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -44,7 +45,7 @@ api.interceptors.response.use(
 
 // Helper to get auth token from localStorage
 const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('token');
 };
 
 // Helper to set auth headers
@@ -52,7 +53,7 @@ const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': token } : {})
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
 
@@ -139,7 +140,7 @@ export const farmlandAPI = {
     const response = await fetch(`${BASE_URL}/api/v1/farmland/create`, {
       method: 'POST',
       headers: {
-        ...(token ? { 'Authorization': token } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: formData
     });
@@ -174,6 +175,13 @@ export const adminAPI = {
 
   getPendingUsers: async () => {
     const response = await fetch(`${BASE_URL}/api/v1/admin/users/pending`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getUserDetails: async (userId: string) => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/users/${userId}`, {
       headers: getAuthHeaders()
     });
     return response.json();
@@ -226,9 +234,37 @@ export const adminAPI = {
     return response.json();
   },
 
-  rejectFarmland: async (farmlandId: string) => {
+  rejectFarmland: async (farmlandId: string, reason: string) => {
     const response = await fetch(`${BASE_URL}/api/v1/admin/farmlands/reject/${farmlandId}`, {
       method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ reason })
+    });
+    return response.json();
+  },
+
+  getDashboardStats: async () => {
+    const response = await fetch(`${BASE_URL}/api/v1/dashboard/admin`, {
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.msg || data.error || "Failed to fetch stats");
+    }
+
+    return response.json();
+  },
+
+  getAllUsers: async () => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/users`, {
+      headers: getAuthHeaders()
+    });
+    return response.json();
+  },
+
+  getAllTransactions: async () => {
+    const response = await fetch(`${BASE_URL}/api/v1/admin/transactions`, {
       headers: getAuthHeaders()
     });
     return response.json();
