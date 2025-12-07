@@ -9,6 +9,8 @@ const adminRoutes = require('./routes/adminRoutes');
 const listingFarmlandRoutes = require('./routes/listingFarmlandRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const marketplaceRoutes = require("./routes/marketPlaceRoute");
+const dashboardRoutes=require("./routes/dashboardRoutes")
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
@@ -35,7 +37,8 @@ app.use('/api/v1/farmer-marketplace-listing', listingFarmlandRoutes);
 app.use('/api/v1/company', companyRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/payment', paymentRoutes);
-
+app.use("/api/v1/marketplace", marketplaceRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
 
 
 

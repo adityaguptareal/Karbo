@@ -29,7 +29,7 @@ router.post(
   createFarmland
 );
 router.get("/my",getMyFarmlands);
-router.get("/:id",getFarmlandById);
-router.get("/",searchFarmland);
+router.get("/farm/:id",getFarmlandById);
+router.get("/search",searchFarmland);
 
 module.exports = router;
