@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Leaf, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  ArrowLeft, 
+import {
+  Leaf,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowLeft,
   User,
   Building2,
   Tractor,
@@ -97,9 +97,9 @@ const Register = () => {
 
     } catch (error: any) {
       console.error('Registration error:', error);
-      
+
       let errorMsg = 'Registration failed. Please try again.';
-      
+
       if (error.response?.data?.msg === 'User already exists') {
         errorMsg = 'An account with this email already exists. Please login instead.';
       } else if (error.response?.data?.errors) {
@@ -107,7 +107,7 @@ const Register = () => {
       } else if (error.response?.data?.msg) {
         errorMsg = error.response.data.msg;
       }
-      
+
       toast({
         title: "Registration Failed",
         description: errorMsg,
@@ -124,8 +124,8 @@ const Register = () => {
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-background">
         <div className="w-full max-w-md space-y-8 py-12">
           {/* Back Button */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -142,8 +142,8 @@ const Register = () => {
             </div>
             <h2 className="text-3xl font-bold text-foreground">Create your account</h2>
             <p className="text-muted-foreground">
-              {userType === 'farmer' 
-                ? 'Turn your eco-friendly farming practices into real income. Join thousands of farmers already earning.' 
+              {userType === 'farmer'
+                ? 'Turn your eco-friendly farming practices into real income. Join thousands of farmers already earning.'
                 : 'Access verified carbon credits from sustainable farms worldwide. Achieve compliance with confidence.'}
             </p>
           </div>
@@ -154,18 +154,15 @@ const Register = () => {
               type="button"
               onClick={() => setUserType('company')}
               disabled={isLoading}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                userType === 'company'
+              className={`p-4 rounded-lg border-2 transition-all ${userType === 'company'
                   ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-900/10'
                   : 'border-border hover:border-emerald-300'
-              }`}
+                }`}
             >
-              <Building2 className={`w-6 h-6 mx-auto mb-2 ${
-                userType === 'company' ? 'text-emerald-600' : 'text-muted-foreground'
-              }`} />
-              <p className={`text-sm font-medium ${
-                userType === 'company' ? 'text-emerald-600' : 'text-foreground'
-              }`}>
+              <Building2 className={`w-6 h-6 mx-auto mb-2 ${userType === 'company' ? 'text-emerald-600' : 'text-muted-foreground'
+                }`} />
+              <p className={`text-sm font-medium ${userType === 'company' ? 'text-emerald-600' : 'text-foreground'
+                }`}>
                 Company
               </p>
             </button>
@@ -173,18 +170,15 @@ const Register = () => {
               type="button"
               onClick={() => setUserType('farmer')}
               disabled={isLoading}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                userType === 'farmer'
+              className={`p-4 rounded-lg border-2 transition-all ${userType === 'farmer'
                   ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-900/10'
                   : 'border-border hover:border-emerald-300'
-              }`}
+                }`}
             >
-              <Tractor className={`w-6 h-6 mx-auto mb-2 ${
-                userType === 'farmer' ? 'text-emerald-600' : 'text-muted-foreground'
-              }`} />
-              <p className={`text-sm font-medium ${
-                userType === 'farmer' ? 'text-emerald-600' : 'text-foreground'
-              }`}>
+              <Tractor className={`w-6 h-6 mx-auto mb-2 ${userType === 'farmer' ? 'text-emerald-600' : 'text-muted-foreground'
+                }`} />
+              <p className={`text-sm font-medium ${userType === 'farmer' ? 'text-emerald-600' : 'text-foreground'
+                }`}>
                 Farmer
               </p>
             </button>
@@ -202,7 +196,7 @@ const Register = () => {
                 <Input
                   id="name"
                   type="text"
-                  placeholder={userType === 'company' ? 'Your Company Ltd.' : 'John Doe'}
+                  placeholder={userType === 'company' ? 'Your Company Ltd.' : 'Ram Sinha'}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="pl-10"
@@ -342,8 +336,8 @@ const Register = () => {
             Join the Green Revolution
           </h3>
           <p className="text-muted-foreground">
-            {userType === 'farmer' 
-              ? 'Get verified, list your carbon credits, and start earning from your sustainable practices.' 
+            {userType === 'farmer'
+              ? 'Get verified, list your carbon credits, and start earning from your sustainable practices.'
               : 'Purchase verified carbon credits and achieve your sustainability goals with confidence.'}
           </p>
         </div>

@@ -109,10 +109,10 @@ export function Navbar({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild className="hover:bg-gray-500/50">
                       <Link to={getDashboardLink()}>Dashboard</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
+                    <DropdownMenuItem asChild className="hover:bg-gray-500/50">
                       <Link to="/settings">Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

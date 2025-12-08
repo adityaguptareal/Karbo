@@ -38,7 +38,7 @@ exports.createFarmland = async (req, res) => {
     const landImages = req.files.images.map(f => f.path);
 
     // Carbon Credit Calculation Logic 
-    const areaInHectares = validation.data.area; 
+    const areaInHectares = validation.data.area;
     const method = (validation.data.cultivationMethod || "").toLowerCase();
 
     let multiplier = 1.0; // Base multiplier
@@ -75,7 +75,8 @@ exports.createFarmland = async (req, res) => {
     console.error("createFarmland error:", error);
     return res.status(500).json({
       msg: "Internal server error",
-      error: error.message,
+      error: error.message || "Unknown error",
+      details: error
     });
   }
 };

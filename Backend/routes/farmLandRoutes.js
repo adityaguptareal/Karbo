@@ -11,7 +11,7 @@ const {
   searchFarmland
 } = require("../controllers/farmLandController");
 
-const upload = require("../utils/upload"); 
+const upload = require("../utils/upload");
 
 
 router.use(auth);
@@ -23,13 +23,13 @@ router.use(isFarmer);
 router.post(
   "/create",
   upload.fields([
-    { name: "documents", maxCount: 5 },
-    { name: "images", maxCount: 5 }
+    { name: "documents", maxCount: 10 },
+    { name: "images", maxCount: 10 }
   ]),
   createFarmland
 );
-router.get("/my",getMyFarmlands);
-router.get("/farm/:id",getFarmlandById);
-router.get("/search",searchFarmland);
+router.get("/my", getMyFarmlands);
+router.get("/farm/:id", getFarmlandById);
+router.get("/search", searchFarmland);
 
 module.exports = router;

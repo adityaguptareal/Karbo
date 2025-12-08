@@ -29,14 +29,16 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
   { label: "Settings", href: "/farmer/settings", icon: Settings },
 ];
+
 
 const CULTIVATION_METHODS = [
   { value: "Organic", label: "Organic Farming (1.5x Credits)" },
@@ -59,6 +61,8 @@ export default function FarmerUpload() {
 
   const [documents, setDocuments] = useState<File[]>([]);
   const [images, setImages] = useState<File[]>([]);
+  const [aadhaarCards, setAadhaarCards] = useState<File[]>([]);
+  const [panCards, setPanCards] = useState<File[]>([]);
 
   const handleCreate = async (e: any) => {
     e.preventDefault();
@@ -81,9 +85,16 @@ export default function FarmerUpload() {
         area: (Number(payload.area) * 2.47105).toString()
       };
 
+      // Combine all documents into one array for submission
+      const allDocuments = [
+        ...documents,
+        ...aadhaarCards,
+        ...panCards
+      ];
+
       await farmerApi.createFarmland(
         payloadInAcres,
-        documents,
+        allDocuments,
         images
       );
 
@@ -101,12 +112,14 @@ export default function FarmerUpload() {
       });
       setDocuments([]);
       setImages([]);
+      setAadhaarCards([]);
+      setPanCards([]);
 
     } catch (err: any) {
       console.error("UPLOAD ERROR:", err);
       toast({
         title: "Upload failed",
-        description: err?.response?.data?.message || "Backend server error (500).",
+        description: err?.response?.data?.msg || err?.response?.data?.message || err?.message || "Something went wrong.",
         variant: "destructive",
       });
     } finally {
@@ -200,51 +213,101 @@ export default function FarmerUpload() {
             <Separator className="my-2" />
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Documents</Label>
-                <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative">
-                  <input
-                    type="file"
-                    multiple
-                    accept="application/pdf,image/*"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={(e) => setDocuments(Array.from(e.target.files ?? []))}
-                  />
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-full text-primary">
-                      <FileCheck className="w-5 h-5" />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {documents.length > 0 ? (
-                        <span className="text-primary font-medium">{documents.length} files selected</span>
-                      ) : (
-                        "Tap to upload PDF/Images"
-                      )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Legal Documents (PDF)</Label>
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative h-[160px] flex flex-col justify-center items-center">
+                    <input
+                      type="file"
+                      multiple
+                      accept="application/pdf,image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setDocuments(Array.from(e.target.files ?? []))}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-2 bg-primary/10 rounded-full text-primary">
+                        <FileCheck className="w-5 h-5" />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {documents.length > 0 ? (
+                          <span className="text-primary font-medium">{documents.length} files selected</span>
+                        ) : (
+                          "Upload Legal Docs"
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Farm Images</Label>
-                <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={(e) => setImages(Array.from(e.target.files ?? []))}
-                  />
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-full text-primary">
-                      <ImageIcon className="w-5 h-5" />
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Farm Images</Label>
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative h-[160px] flex flex-col justify-center items-center">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setImages(Array.from(e.target.files ?? []))}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-2 bg-primary/10 rounded-full text-primary">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {images.length > 0 ? (
+                          <span className="text-primary font-medium">{images.length} images selected</span>
+                        ) : (
+                          "Upload Photos"
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {images.length > 0 ? (
-                        <span className="text-primary font-medium">{images.length} images selected</span>
-                      ) : (
-                        "Tap to upload Photos"
-                      )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Aadhaar Card</Label>
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative h-full flex flex-col justify-center items-center">
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setAadhaarCards(Array.from(e.target.files ?? []))}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-2 bg-primary/10 rounded-full text-primary">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {aadhaarCards.length > 0 ? (
+                          <span className="text-primary font-medium">{aadhaarCards.length} file selected</span>
+                        ) : (
+                          "Upload Aadhaar"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">PAN Card</Label>
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 hover:bg-muted/40 transition-colors relative h-full flex flex-col justify-center items-center">
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => setPanCards(Array.from(e.target.files ?? []))}
+                    />
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="p-2 bg-primary/10 rounded-full text-primary">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {panCards.length > 0 ? (
+                          <span className="text-primary font-medium">{panCards.length} file selected</span>
+                        ) : (
+                          "Upload PAN"
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -376,7 +439,7 @@ export default function FarmerUpload() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>Legal Documents (PDF)</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer">
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer h-[180px] flex flex-col justify-center items-center">
                       <input
                         type="file"
                         multiple
@@ -397,7 +460,7 @@ export default function FarmerUpload() {
 
                   <div className="space-y-2">
                     <Label>Farmland Photos</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer">
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer h-[180px] flex flex-col justify-center items-center">
                       <input
                         type="file"
                         multiple
@@ -411,6 +474,46 @@ export default function FarmerUpload() {
                       {images.length > 0 && (
                         <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> {images.length} images selected
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Aadhaar Card</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer h-[180px] flex flex-col justify-center items-center">
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => setAadhaarCards(Array.from(e.target.files ?? []))}
+                      />
+                      <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground">Click to upload Aadhaar</p>
+                      <p className="text-xs text-muted-foreground mt-1">PDF or Images up to 5MB</p>
+                      {aadhaarCards.length > 0 && (
+                        <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> {aadhaarCards.length} file selected
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>PAN Card</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative cursor-pointer h-[180px] flex flex-col justify-center items-center">
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => setPanCards(Array.from(e.target.files ?? []))}
+                      />
+                      <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground">Click to upload PAN</p>
+                      <p className="text-xs text-muted-foreground mt-1">PDF or Images up to 5MB</p>
+                      {panCards.length > 0 && (
+                        <div className="mt-2 text-sm text-primary font-medium flex items-center justify-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> {panCards.length} file selected
                         </div>
                       )}
                     </div>

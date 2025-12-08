@@ -10,7 +10,7 @@ const listingFarmlandRoutes = require('./routes/listingFarmlandRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const marketplaceRoutes = require("./routes/marketPlaceRoute");
-const dashboardRoutes=require("./routes/dashboardRoutes")
+const dashboardRoutes = require("./routes/dashboardRoutes")
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
@@ -40,8 +40,14 @@ app.use('/api/v1/payment', paymentRoutes);
 app.use("/api/v1/marketplace", marketplaceRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
-
-
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("🔴 Global Error Handler:", err);
+    res.status(err.status || 500).json({
+        msg: err.message || "Internal Server Error",
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
 
 app.listen(port, () => {
     console.log(`${process.env.APP_NAME || "App"} is running on http://localhost:${port}`);

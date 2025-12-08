@@ -388,7 +388,7 @@ export default function AdminUsers() {
                                     <Label htmlFor="name">Full Name</Label>
                                     <Input
                                         id="name"
-                                        placeholder="John Doe"
+                                        placeholder="Ram Sinha"
                                         value={adminForm.name}
                                         onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
                                         disabled={isCreating}

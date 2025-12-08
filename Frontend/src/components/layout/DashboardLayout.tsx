@@ -140,50 +140,6 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/">
-                <Home className="w-5 h-5" />
-              </Link>
-            </Button>
-
-            {/* Notification Dropdown */}
-            <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
-              <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-lg hover:bg-muted">
-                  <Bell className="w-5 h-5 text-muted-foreground" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-5 h-5 bg-destructive text-white text-xs rounded-full flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-                <div className="p-2 font-semibold border-b">Notifications</div>
-
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">No notifications</div>
-                ) : (
-                  notifications.map((notif) => (
-                    <DropdownMenuItem
-                      key={notif._id}
-                      className={cn(
-                        "flex flex-col items-start p-3 cursor-pointer",
-                        !notif.isRead && "bg-primary/5"
-                      )}
-                      onClick={() => markAsRead(notif._id)}
-                    >
-                      <p className="text-sm">{notif.message}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(notif.createdAt).toLocaleDateString()}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -204,7 +160,7 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
                   <Link to={`/${userType}/settings`}>
-                    <Settings className="w-4 h-4 mr-2" />
+                    <Settings className="w-4 h-4 mr-2 hover:bg-gray-500/50" />
                     Settings
                   </Link>
                 </DropdownMenuItem>

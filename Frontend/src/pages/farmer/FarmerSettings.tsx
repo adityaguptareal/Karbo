@@ -369,7 +369,7 @@ const FarmerSettings = () => {
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label>Full Name</Label>
-                      <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="John Doe" />
+                      <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="Ram Sinha" />
                     </div>
                     <div className="space-y-2">
                       <Label>Email</Label>

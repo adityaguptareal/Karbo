@@ -40,8 +40,8 @@ import { farmerApi, Farmland, FarmerListing } from "@/services/farmerApi";
 
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/farmer/marketplace", icon: Store },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
   { label: "Settings", href: "/farmer/settings", icon: Settings },

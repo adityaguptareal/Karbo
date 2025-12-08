@@ -12,19 +12,15 @@ const FarmlandSchema = new mongoose.Schema(
     location: { type: String, required: true },
     area: { type: Number, required: true }, // acres or hectares
 
-    landDocuments: [
-      {
-        type: String,
-        required: true,
-      }
-    ],
+    landDocuments: {
+      type: [String],
+      required: true
+    },
 
-    landImages: [
-      {
-        type: String,
-        required: true,
-      }
-    ],
+    landImages: {
+      type: [String],
+      required: true
+    },
 
     landType: { type: String },
     cultivationMethod: {
