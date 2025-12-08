@@ -5,15 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { farmerApi, Farmland } from "@/services/farmerApi";
 import { LayoutDashboard, Upload, Leaf, Wallet, FileText, Settings, MapPin, Ruler, Sprout, Loader2 } from "lucide-react";
 
-const navItems = [
-    { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
-    { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
-    { label: "My Farmlands", href: "/farmer/my-farmlands", icon: Sprout },
-    { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
-    { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
-    { label: "Documents", href: "/farmer/documents", icon: FileText },
-    { label: "Settings", href: "/farmer/settings", icon: Settings },
-];
+import { farmerNavItems as navItems } from "@/config/farmerNav";
 
 export default function FarmerMyFarmlands() {
     const [farmlands, setFarmlands] = useState<Farmland[]>([]);
@@ -78,13 +70,12 @@ export default function FarmerMyFarmlands() {
                                     )}
                                     <div className="absolute top-3 right-3">
                                         <Badge
-                                            className={`capitalize ${
-                                                land.status === "verified"
+                                            className={`capitalize ${land.status === "verified"
                                                     ? "bg-green-500 hover:bg-green-500/80 text-white"
                                                     : land.status === "rejected"
-                                                    ? "bg-red-500 hover:bg-red-500/80 text-white"
-                                                    : "bg-yellow-500 hover:bg-yellow-500/80 text-black"
-                                            }`}
+                                                        ? "bg-red-500 hover:bg-red-500/80 text-white"
+                                                        : "bg-yellow-500 hover:bg-yellow-500/80 text-black"
+                                                }`}
                                         >
                                             {land.status.replace("_", " ")}
                                         </Badge>
