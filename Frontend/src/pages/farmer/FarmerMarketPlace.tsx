@@ -72,6 +72,14 @@ export default function FarmerMarketplace() {
     description: "",
   });
 
+  // Edit listing state
+  const [editingListing, setEditingListing] = useState<FarmerListing | null>(null);
+  const [editForm, setEditForm] = useState({
+    totalCredits: "",
+    pricePerCredit: "",
+    description: "",
+  });
+
   // Load marketplace data
   useEffect(() => {
     const load = async () => {
@@ -138,6 +146,46 @@ export default function FarmerMarketplace() {
       toast({
         title: "Failed to create listing",
         description: err?.response?.data?.message || "Try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Open edit modal
+  const handleEditClick = (listing: FarmerListing) => {
+    setEditingListing(listing);
+    setEditForm({
+      totalCredits: String(listing.totalCredits),
+      pricePerCredit: String(listing.pricePerCredit),
+      description: listing.description || "",
+    });
+  };
+
+  // Submit edit
+  const handleUpdateListing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingListing) return;
+
+    try {
+      setCreating(true); // Reuse creating state for loading
+      const updated = await farmerApi.updateListing(editingListing._id, {
+        totalCredits: Number(editForm.totalCredits),
+        pricePerCredit: Number(editForm.pricePerCredit),
+        description: editForm.description,
+      });
+
+      setMyListings((prev) =>
+        prev.map((l) => (l._id === updated._id ? updated : l))
+      );
+
+      toast({ title: "Listing updated successfully" });
+      setEditingListing(null);
+    } catch (err: any) {
+      toast({
+        title: "Update failed",
+        description: err?.response?.data?.message || "Could not update listing",
         variant: "destructive",
       });
     } finally {
@@ -225,7 +273,10 @@ export default function FarmerMarketplace() {
     );
   }
 
+
+
   return (
+
     <DashboardLayout navItems={navItems} userType="farmer">
       <div className="space-y-8">
         {/* Header */}
@@ -424,7 +475,17 @@ export default function FarmerMarketplace() {
                           </div>
                         )}
 
-                        <div className="flex justify-end pt-2">
+                        <div className="flex justify-end pt-2 gap-2">
+                          {listing.status !== 'sold' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => handleEditClick(listing)}
+                            >
+                              Edit
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -443,6 +504,48 @@ export default function FarmerMarketplace() {
           )}
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      {editingListing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-xl p-6 w-full max-w-md space-y-4">
+            <h2 className="text-xl font-bold">Edit Listing</h2>
+            <form onSubmit={handleUpdateListing} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Total Credits</Label>
+                <Input
+                  type="number"
+                  value={editForm.totalCredits}
+                  onChange={(e) => setEditForm({ ...editForm, totalCredits: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Price per Credit (₹)</Label>
+                <Input
+                  type="number"
+                  value={editForm.pricePerCredit}
+                  onChange={(e) => setEditForm({ ...editForm, pricePerCredit: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="ghost" onClick={() => setEditingListing(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={creating}>
+                  {creating ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
