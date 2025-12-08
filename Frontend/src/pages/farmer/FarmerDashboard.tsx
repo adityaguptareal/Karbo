@@ -81,9 +81,10 @@ export const FarmerDashboard = () => {
   // Safe calculations — prevent reduce() crash
   const safeFarmlands = Array.isArray(farmlands) ? farmlands : [];
 
-  const totalFarmlands = stats?.totalFarmlands ?? safeFarmlands.length;
-  const approvedFarmlands = stats?.approvedFarmlands ?? 0;
-  const pendingFarmlands = stats?.pendingFarmlands ?? 0;
+  // Calculate stats directly from the farmlands list to ensure they match
+  const totalFarmlands = safeFarmlands.length;
+  const approvedFarmlands = safeFarmlands.filter(f => f.status === 'verified').length;
+  const pendingFarmlands = safeFarmlands.filter(f => f.status === 'pending_verification' || f.status === 'pending').length;
 
   const totalArea = safeFarmlands.reduce(
     (sum, f) => sum + Number(f.area || 0),
