@@ -132,9 +132,7 @@ export function DashboardLayout({ navItems, userType, children }: DashboardLayou
             </button>
 
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img src="/Logo.png" alt="Karbo Logo" className="w-9 h-9 object-contain" />
               <span className="font-display text-lg font-semibold hidden sm:block">
                 Karbo
               </span>
