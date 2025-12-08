@@ -23,7 +23,8 @@ import {
   IndianRupee,
   Save,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Sprout
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { farmerApi, FarmerProfile } from "@/services/farmerApi";
@@ -32,8 +33,9 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "My Farmlands", href: "/farmer/my-farmlands", icon: Sprout },
+  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
   { label: "Settings", href: "/farmer/settings", icon: Settings },

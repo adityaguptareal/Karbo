@@ -1,4 +1,3 @@
-// src/services/farmerApi.ts
 import axios, { AxiosError } from "axios";
 
 export const BASE_URL =
@@ -79,7 +78,9 @@ export interface Farmland {
   cultivationMethod: string;
   status: string;
   createdAt: string;
-  images: string[];
+  landImages: string[];
+  landDocuments: string[];
+  rejectionReason?: string;
 }
 
 export interface FarmerListing {
@@ -186,7 +187,8 @@ export const farmerApi = {
   async getMyFarmlands(): Promise<Farmland[]> {
     try {
       const res = await farmerClient.get("/farmland/my");
-      return extractData<Farmland[]>(res) ?? [];
+      const data = extractData<{ farmlands: Farmland[] }>(res);
+      return data.farmlands || [];
     } catch (error) {
       return rethrow(error);
     }
@@ -195,7 +197,8 @@ export const farmerApi = {
   async searchFarmlands(q: string): Promise<Farmland[]> {
     try {
       const res = await farmerClient.get("/farmland", { params: { q } });
-      return extractData<Farmland[]>(res) ?? [];
+      const data = extractData<{ results: Farmland[] }>(res);
+      return data.results || [];
     } catch (error) {
       return rethrow(error);
     }
