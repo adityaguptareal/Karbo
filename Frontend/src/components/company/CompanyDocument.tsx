@@ -34,7 +34,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
-  { label: "Documents Verification", href: "/company/documents", icon: FileCheck},
+  { label: "Documents Verification", href: "/company/documents", icon: FileCheck },
   { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
@@ -111,14 +111,14 @@ const CompanyDocuments = () => {
 
       if (response.data.user) {
         const user = response.data.user;
-        
+
         console.log('User data:', user); // ✅ Debug - check what you're receiving
         console.log('Status:', user.status); // ✅ Debug
-        
+
         // ✅ Check the correct field
         const status = user.status || 'not_submitted';
         const isVerified = status === 'verified';
-        
+
         setIsVerified(isVerified);
         setVerificationStatus(status);
 
@@ -129,7 +129,7 @@ const CompanyDocuments = () => {
               return {
                 ...doc,
                 url: user.companyDocuments[index],
-                status: status === 'verified' ? 'verified' : 'uploaded'
+                status: (status === 'verified' ? 'verified' : 'uploaded') as DocumentUpload['status']
               };
             }
             return doc;
@@ -243,7 +243,7 @@ const CompanyDocuments = () => {
   const submitForVerification = async () => {
     // Check if at least some documents have files OR urls
     const hasDocuments = documents.some(doc => doc.file !== null || doc.url !== null);
-    
+
     if (!hasDocuments) {
       toast({
         title: "No Documents",
@@ -256,7 +256,7 @@ const CompanyDocuments = () => {
     try {
       setUploading(true);
       const formData = new FormData();
-      
+
       // Append files that aren't uploaded yet
       documents.forEach((doc) => {
         if (doc.file) {
@@ -265,12 +265,12 @@ const CompanyDocuments = () => {
       });
 
       const token = localStorage.getItem('token');
-      
+
       const response = await axios.post(
         `${API_BASE_URL}/company/documents/upload`,
         formData,
         {
-          headers: { 
+          headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data'
           }
@@ -440,7 +440,7 @@ const CompanyDocuments = () => {
                     <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 rounded-lg">
                       <Icon className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
                         <div>
@@ -523,8 +523,8 @@ const CompanyDocuments = () => {
                 <Button
                   onClick={submitForVerification}
                   disabled={
-                    uploading || 
-                    verificationStatus === 'pending_verification' || 
+                    uploading ||
+                    verificationStatus === 'pending_verification' ||
                     verificationStatus === 'verified'
                   } // ✅ CORRECT - only disable if uploading or already submitted
                   className="w-full bg-emerald-600 hover:bg-emerald-700"
