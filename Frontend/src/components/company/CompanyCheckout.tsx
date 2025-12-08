@@ -251,48 +251,53 @@ const CompanyCheckout = () => {
       order_id: order.id,
       //@ts-ignore
       handler: async function(response: any) {
-        try {
-          const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
-          const verifyResponse = await axios.post(
-            verifyUrl,
-            {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              listingId: listing._id,
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
-
-          // If backend verification is successful:
-          // (adjust according to your verify API response)
-          if (verifyResponse.data.success) {
-            // Redirect to OrderSuccess with real data
-            console.log(listing);
-            navigate("/company/order-success", {
-              state: {
-                listing,
-                paymentDetails: {
-                  paymentId: response.razorpay_payment_id,
-                  orderId: response.razorpay_order_id,
-                  amount: listing.totalValue,
-                  currency: "INR",
-                  status: "SUCCESS",
-                },
-              },
-            });
-          } else {
-            alert("Payment verification failed");
-          }
-        } catch (err) {
-          alert("Payment Failed");
-          console.log(err);
-        }
+  try {
+    const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
+    const verifyResponse = await axios.post(
+      verifyUrl,
+      {
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_signature: response.razorpay_signature,
+        listingId: listing._id,
       },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    // If backend verification is successful
+    if (verifyResponse.data.success) {
+      // Show success toast
+      toast({
+        title: "Payment Successful! 🎉",
+        description: "Your carbon credits have been purchased successfully.",
+      });
+
+      // Redirect to purchases page after 2 seconds
+      setTimeout(() => {
+        navigate("/company/purchases");
+      }, 2000);
+    } else {
+      // Verification failed
+      toast({
+        title: "Payment Verification Failed",
+        description: "Please contact support for assistance.",
+        variant: "destructive"
+      });
+    }
+  } catch (err) {
+    console.error("Payment verification error:", err);
+    toast({
+      title: "Payment Failed",
+      description: "An error occurred during payment verification.",
+      variant: "destructive"
+    });
+  }
+},
+
 
       theme:{
         color:"#cc3333ff"
