@@ -1,34 +1,36 @@
 // src/pages/farmer/FarmerDashboard.tsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
+  FarmerProfile,
+  Farmland,
+  FarmerDashboardStats,
+  farmerApi,
+} from "@/services/farmerApi";
+import {
+  FileText,
+  Settings,
+  Sprout,
   LayoutDashboard,
   Upload,
   Leaf,
   Wallet,
-  FileText,
-  Settings,
-  TrendingUp,
   Clock,
   CheckCircle,
-  ArrowUpRight,
+  TrendingUp,
+  ArrowUpRight
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
-import {
-  farmerApi,
-  FarmerProfile,
-  Farmland,
-  FarmerDashboardStats,
-} from "@/services/farmerApi";
 
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "My Farmlands", href: "/farmer/my-farmlands", icon: Sprout },
   { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
@@ -39,7 +41,8 @@ const navItems = [
 const normalizeStatus = (s: string | null | undefined) =>
   (s || "pending") as any;
 
-const FarmerDashboard = () => {
+export const FarmerDashboard = () => {
+  const { toast } = useToast();
   const [profile, setProfile] = useState<FarmerProfile | null>(null);
   const [stats, setStats] = useState<FarmerDashboardStats | null>(null);
   const [farmlands, setFarmlands] = useState<Farmland[]>([]);
@@ -204,9 +207,9 @@ const FarmerDashboard = () => {
                       key={farm._id}
                       className="flex items-center gap-4 p-4 bg-muted/40 rounded-lg"
                     >
-                      {farm.images?.[0] ? (
+                      {farm.landImages?.[0] ? (
                         <img
-                          src={farm.images[0]}
+                          src={farm.landImages[0]}
                           alt={farm.landName}
                           className="w-16 h-16 rounded-lg object-cover"
                         />
@@ -295,7 +298,7 @@ const FarmerDashboard = () => {
 
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
-               <div className="bg-card rounded-xl border border-border p-6">
+            <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Account info
               </h3>
@@ -323,8 +326,8 @@ const FarmerDashboard = () => {
                 </div>
               </div>
             </div>
-           
-         
+
+
 
             <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
               <h3 className="font-semibold text-foreground mb-2">

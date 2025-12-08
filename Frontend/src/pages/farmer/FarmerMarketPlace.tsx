@@ -33,6 +33,7 @@ import {
   Wallet,
   FileText,
   Settings,
+  Sprout
 } from "lucide-react";
 
 import { toast } from "@/hooks/use-toast";
@@ -41,6 +42,7 @@ import { farmerApi, Farmland, FarmerListing } from "@/services/farmerApi";
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "My Farmlands", href: "/farmer/my-farmlands", icon: Sprout },
   { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
@@ -250,225 +252,168 @@ export default function FarmerMarketplace() {
           </div>
         </div>
 
-        {/* Main */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Create Listing */}
-          <div className="bg-card p-6 border rounded-xl space-y-4">
-            <h2 className="font-semibold text-lg">Create listing</h2>
+        {/* Create Listing */}
+        <div className="bg-card border p-6 rounded-xl space-y-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Store className="w-5 h-5" /> Create New Listing
+          </h2>
+          <form onSubmit={handleCreateListing} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Select Farmland</Label>
+              <Select
+                value={form.farmlandId}
+                onValueChange={(val) => setForm({ ...form, farmlandId: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a farm..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {farmlands.map((f) => (
+                    <SelectItem key={f._id} value={f._id}>
+                      {f.landName} ({f.area} acres)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            {farmlands.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Add farmland first.
-              </p>
-            ) : (
-              <form onSubmit={handleCreateListing} className="space-y-4">
-                <div>
-                  <Label>Farmland</Label>
-                  <Select
-                    value={form.farmlandId}
-                    onValueChange={(v) =>
-                      setForm((p) => ({ ...p, farmlandId: v }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select farmland" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {farmlands.map((f) => (
-                        <SelectItem value={f._id} key={f._id}>
-                          {f.landName} — {f.location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-2">
+              <Label>Total Credits to Sell</Label>
+              <Input
+                type="number"
+                placeholder="e.g. 100"
+                value={form.totalCredits}
+                onChange={(e) => setForm({ ...form, totalCredits: e.target.value })}
+              />
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Total credits</Label>
-                    <Input
-                      value={form.totalCredits}
-                      onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          totalCredits: e.target.value,
-                        }))
-                      }
-                      type="number"
-                    />
-                  </div>
-                  <div>
-                    <Label>Price per credit (₹)</Label>
-                    <Input
-                      value={form.pricePerCredit}
-                      onChange={(e) =>
-                        setForm((p) => ({
-                          ...p,
-                          pricePerCredit: e.target.value,
-                        }))
-                      }
-                      type="number"
-                    />
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <Label>Price per Credit (₹)</Label>
+              <Input
+                type="number"
+                placeholder="e.g. 500"
+                value={form.pricePerCredit}
+                onChange={(e) => setForm({ ...form, pricePerCredit: e.target.value })}
+              />
+            </div>
 
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={form.description}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, description: e.target.value }))
-                    }
-                    rows={3}
-                  />
-                </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Description</Label>
+              <Textarea
+                placeholder="Describe your sustainable practices..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
 
-                <Button className="w-full" disabled={creating}>
-                  {creating ? "Creating..." : (
-                    <>
-                      <Plus className="w-4 h-4 mr-1" />
-                      List Credits
-                    </>
-                  )}
-                </Button>
-              </form>
-            )}
+            <div className="md:col-span-2">
+              <Button type="submit" disabled={creating} className="w-full md:w-auto">
+                {creating ? "Creating..." : <><Plus className="w-4 h-4 mr-2" /> Create Listing</>}
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Listings List */}
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h2 className="text-xl font-semibold">Your Listings</h2>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search listings..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Select
+                value={statusFilter}
+                onValueChange={(val) => setStatusFilter(val as StatusFilter)}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="sold">Sold</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* My Listings */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-card p-6 border rounded-xl">
-              <div className="flex justify-between mb-4">
-                <div>
-                  <h2 className="font-semibold text-lg">My Listings</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Manage your listed credits.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search…"
-                    className="w-56"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+          {filteredMyListings.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed rounded-xl">
+              <Store className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No listings found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredMyListings.map((listing) => {
+                const farm = farmlands.find((f) => f._id === listing.farmlandId);
+                return (
+                  <div
+                    key={listing._id}
+                    className="bg-card border rounded-xl overflow-hidden hover:shadow-md transition-shadow"
                   >
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="sold">Sold</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Listing list */}
-              {filteredMyListings.length === 0 ? (
-                <p className="text-center text-muted-foreground py-6">
-                  No listings found.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {filteredMyListings.map((l) => {
-                    const farm = farmlands.find((f) => f._id === l.farmlandId);
-                    return (
-                      <div
-                        key={l._id}
-                        className="flex justify-between p-4 border rounded-lg bg-muted/40"
-                      >
-                        <div className="space-y-1 max-w-[70%]">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">
-                              {farm?.landName || "Farmland"}
-                            </p>
-                            {statusBadge(l.status)}
-                          </div>
-                          <p className="flex items-center text-xs text-muted-foreground gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {farm?.location}
-                          </p>
-
-                          {l.description && (
-                            <p className="text-xs line-clamp-2">
-                              {l.description}
-                            </p>
-                          )}
-
-                          <p className="text-xs text-muted-foreground flex gap-2">
-                            <span>{l.totalCredits} credits</span> •{" "}
-                            <span>₹{l.pricePerCredit}/credit</span> •{" "}
-                            <span>
-                              <Calendar className="w-3 h-3 inline" />{" "}
-                              {new Date(l.createdAt).toLocaleDateString()}
-                            </span>
+                    <div className="p-5 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {farm?.landName || "Unknown Farm"}
+                          </h3>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <MapPin className="w-3 h-3" /> {farm?.location || "Unknown"}
                           </p>
                         </div>
+                        {statusBadge(listing.status)}
+                      </div>
 
+                      <div className="grid grid-cols-2 gap-4 py-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                            Credits
+                          </p>
+                          <p className="font-medium text-lg">{listing.totalCredits}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                            Price/Credit
+                          </p>
+                          <p className="font-medium text-lg">₹{listing.pricePerCredit}</p>
+                        </div>
+                      </div>
+
+                      {listing.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {listing.description}
+                        </p>
+                      )}
+
+                      <div className="pt-2 flex justify-between items-center text-xs text-muted-foreground border-t mt-2">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(listing.createdAt).toLocaleDateString()}
+                        </span>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteListing(l._id)}
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                          onClick={() => handleDeleteListing(listing._id)}
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Global Marketplace */}
-            <div className="bg-card p-6 border rounded-xl">
-              <div className="flex justify-between mb-4">
-                <h2 className="font-semibold text-lg">Global Marketplace</h2>
-                <Badge variant="outline">Public Listings</Badge>
-              </div>
-
-              {marketListings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No public listings yet.
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {marketListings.map((l) => (
-                    <div
-                      key={l._id}
-                      className="flex justify-between py-2 border-b last:border-b-0 text-sm"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {l.farmland?.landName || "Farmland"}
-                        </p>
-                        <p className="text-xs text-muted-foreground flex gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {l.farmland?.location}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p>{l.totalCredits} credits</p>
-                        <p className="flex items-center gap-1 justify-end">
-                          <IndianRupee className="w-3 h-3" />
-                          {l.pricePerCredit}/credit
-                        </p>
-                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
