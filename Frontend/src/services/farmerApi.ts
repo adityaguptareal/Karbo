@@ -88,7 +88,11 @@ export interface FarmerListing {
   farmlandId: string;
   totalCredits: number;
   pricePerCredit: number;
+  totalValue?: number;
   description: string;
+  validFrom?: string;
+  validTill?: string;
+  soldTo?: string | null;
   status: string;
   createdAt: string;
   updatedAt?: string;
@@ -248,7 +252,8 @@ export const farmerApi = {
   async getMyListings(): Promise<FarmerListing[]> {
     try {
       const res = await farmerClient.get("/farmer-marketplace-listing/my");
-      return extractData<FarmerListing[]>(res) ?? [];
+      const data = extractData<{ listings: FarmerListing[] }>(res);
+      return data.listings || [];
     } catch (error) {
       return rethrow(error);
     }

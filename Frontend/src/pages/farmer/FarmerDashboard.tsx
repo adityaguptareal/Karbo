@@ -180,7 +180,7 @@ export const FarmerDashboard = () => {
                 Your Farmlands
               </h2>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/farmer/farmlands">View all</Link>
+                <Link to="/farmer/my-farmlands">View all</Link>
               </Button>
             </div>
 

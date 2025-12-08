@@ -386,6 +386,16 @@ export default function FarmerMarketplace() {
                           </p>
                           <p className="font-medium text-lg">₹{listing.pricePerCredit}</p>
                         </div>
+                        {listing.totalValue && (
+                          <div className="col-span-2 border-t pt-2 mt-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                              Total Value
+                            </p>
+                            <p className="font-bold text-xl text-primary">
+                              ₹{listing.totalValue.toLocaleString()}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {listing.description && (
@@ -394,19 +404,36 @@ export default function FarmerMarketplace() {
                         </p>
                       )}
 
-                      <div className="pt-2 flex justify-between items-center text-xs text-muted-foreground border-t mt-2">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {new Date(listing.createdAt).toLocaleDateString()}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
-                          onClick={() => handleDeleteListing(listing._id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div className="space-y-2 pt-2 border-t mt-2">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Created: {new Date(listing.createdAt).toLocaleDateString()}
+                          </span>
+                          {listing.validFrom && (
+                            <span className="flex items-center gap-1">
+                              Valid: {new Date(listing.validFrom).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+
+                        {listing.status === 'sold' && (
+                          <div className="bg-blue-50 text-blue-700 px-3 py-2 rounded-md text-xs font-medium flex items-center gap-2">
+                            <CheckCircle className="w-3 h-3" />
+                            Sold to: {listing.soldTo || "Buyer"}
+                          </div>
+                        )}
+
+                        <div className="flex justify-end pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                            onClick={() => handleDeleteListing(listing._id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" /> Delete
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
