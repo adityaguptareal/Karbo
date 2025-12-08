@@ -336,7 +336,7 @@ const CompanyCheckout = () => {
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">Unable to Load Checkout</h3>
             <p className="text-muted-foreground mb-4">{error || "Listing not found"}</p>
-            <Button onClick={() => navigate('/marketplace')}>
+            <Button onClick={() => navigate('company/marketplace')}>
               Back to Marketplace
             </Button>
           </div>
@@ -355,7 +355,7 @@ const CompanyCheckout = () => {
         <div>
           <Button
             variant="ghost"
-            onClick={() => navigate('/marketplace')}
+            onClick={() => navigate('/company/marketplace')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
