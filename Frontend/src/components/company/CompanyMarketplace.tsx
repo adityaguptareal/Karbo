@@ -46,6 +46,7 @@ import {
   Loader2,
   AlertCircle,
   Shield,
+  FileCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -81,6 +82,7 @@ interface CartItem {
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
+  { label: "Documents Verification", href: "/company/documents", icon: FileCheck },
   { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
@@ -339,7 +341,7 @@ const CompanyMarketplace = () => {
                 {verificationStatus !== 'pending_verification' && ( // ✅ Changed from 'pending'
                   <Button
                     size="sm"
-                    onClick={() => navigate('/company/settings')}
+                    onClick={() => navigate('/company/documents')}
                     className="bg-yellow-600 hover:bg-yellow-700"
                   >
                     <Shield className="w-4 h-4 mr-2" />

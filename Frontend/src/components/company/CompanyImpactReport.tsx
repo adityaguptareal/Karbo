@@ -24,12 +24,14 @@ import {
   Loader2,
   AlertCircle,
   Share2,
+  FileCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
+  { label: "Documents Verification", href: "/company/documents", icon: FileCheck },
   { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
@@ -133,7 +135,6 @@ const CompanyImpactReport = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -151,7 +152,6 @@ const CompanyImpactReport = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center max-w-md">
@@ -204,7 +204,6 @@ const CompanyImpactReport = () => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser?.name || "Company User"}
     >
       <div className="space-y-6">
         {/* Header */}
