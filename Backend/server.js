@@ -11,6 +11,7 @@ const companyRoutes = require('./routes/companyRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const marketplaceRoutes = require("./routes/marketPlaceRoute");
 const dashboardRoutes = require("./routes/dashboardRoutes")
+const walletRoutes = require("./routes/walletRoutes");
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 3000;
@@ -39,10 +40,11 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use("/api/v1/marketplace", marketplaceRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/wallet", walletRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error("🔴 Global Error Handler:", err);
+    console.error(" Global Error Handler:", err);
     res.status(err.status || 500).json({
         msg: err.message || "Internal Server Error",
         error: process.env.NODE_ENV === 'development' ? err : {}
