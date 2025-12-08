@@ -18,12 +18,19 @@ import {
   Activity,
   Loader2,
   AlertCircle,
+  FileCheck,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import axios from "axios";
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
+  { label: "Documents Verification", href: "/company/documents", icon: FileCheck},
   { label: "Marketplace", href: "/company/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
@@ -36,13 +43,61 @@ interface DashboardData {
   totalSpent: number;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+
 const CompanyDashboard = () => {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
 
+  const [verificationStatus, setVerificationStatus] = useState('not_submitted');
+  const [isVerified, setIsVerified] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch Profile Data
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_BASE_URL}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.user) {
+        const user = response.data.user;
+        
+        console.log('User data:', user); // ✅ Debug - check what you're receiving
+        console.log('Status:', user.status); // ✅ Debug
+        
+        // ✅ Check the correct field
+        const status = user.status || 'not_submitted';
+        const isVerified = status === 'verified';
+        
+        setIsVerified(isVerified);
+        setVerificationStatus(status);
+
+        // Load documents if they exist
+        if (user.companyDocuments && user.companyDocuments.length > 0) {
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.msg || "Failed to load profile data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   // Fetch dashboard data
   useEffect(() => {
@@ -80,7 +135,6 @@ const CompanyDashboard = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -98,7 +152,6 @@ const CompanyDashboard = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center max-w-md">
@@ -113,6 +166,48 @@ const CompanyDashboard = () => {
       </DashboardLayout>
     );
   }
+
+  // Get Status Badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'verified':
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Verified
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending Review
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+            <XCircle className="w-3 h-3 mr-1" />
+            Rejected
+          </Badge>
+        );
+      case 'uploaded':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Uploaded
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            Not Uploaded
+          </Badge>
+        );
+    }
+  };
+
 
   const stats = [
     {
@@ -153,7 +248,6 @@ const CompanyDashboard = () => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser?.name || "Company User"}
     >
       <div className="space-y-6">
         {/* Header */}
@@ -166,6 +260,10 @@ const CompanyDashboard = () => {
               Welcome back! Here's your sustainability overview.
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            {getStatusBadge(verificationStatus)}
+          </div>
           <Button
             size="lg"
             className="bg-emerald-600 hover:bg-emerald-700"
@@ -175,6 +273,63 @@ const CompanyDashboard = () => {
             Browse Marketplace
           </Button>
         </div>
+
+        {/* Verification Status Alert */}
+        {!isVerified && verificationStatus === 'pending_verification' && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                  Verification Required
+                </h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Please upload all required documents below to verify your company account and start purchasing carbon credits.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate('/company/documents')}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Verify Account Now
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {verificationStatus === 'pending' && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
+                  Under Review
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Your documents are being reviewed by our team. This usually takes 24-48 hours.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isVerified && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-green-800 dark:text-green-200 mb-1">
+                  Verified Account
+                </h3>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Your company account is verified. You can now purchase carbon credits from the marketplace.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

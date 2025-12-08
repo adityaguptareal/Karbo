@@ -22,6 +22,7 @@ import {
   CheckCircle,
   Loader2,
   AlertCircle,
+  FileCheck,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import axios from "axios";
@@ -31,6 +32,7 @@ const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY || 'your_razorpay_key';
 
 const navItems = [
   { label: "Dashboard", href: "/company/dashboard", icon: LayoutDashboard },
+  { label: "Documents Verification", href: "/company/documents", icon: FileCheck},
   { label: "Marketplace", href: "/marketplace", icon: ShoppingCart },
   { label: "My Purchases", href: "/company/purchases", icon: FileText },
   { label: "Impact Report", href: "/company/impact", icon: BarChart3 },
@@ -306,7 +308,6 @@ const CompanyCheckout = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center">
@@ -324,7 +325,6 @@ const CompanyCheckout = () => {
       <DashboardLayout
         navItems={navItems}
         userType="company"
-        userName={currentUser?.name || "Company User"}
       >
         <div className="flex items-center justify-center h-[60vh]">
           <div className="text-center max-w-md">
@@ -344,7 +344,6 @@ const CompanyCheckout = () => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser?.name || "Company User"}
     >
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
