@@ -32,6 +32,7 @@ import AdminUserDetails from "./pages/admin/AdminUserDetails";
 import AdminFarmlands from "./pages/admin/AdminFarmlands";
 import AdminFarmlandDetails from "./pages/admin/AdminFarmlandDetails";
 import OrderSuccess from "./components/company/OrderSuccess";
+import CompanyDocuments from "./components/company/CompanyDocument";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/company/settings" element={<CompanySettings />} />
             <Route path="/company/checkout/:listingId" element={<CompanyCheckout />} />
             <Route path="/company/order-success" element={<OrderSuccess />} />
+            <Route path="/company/documents" element={<CompanyDocuments />} />
           </Route>
 
           {/* Admin Dashboard Routes - Protected */}

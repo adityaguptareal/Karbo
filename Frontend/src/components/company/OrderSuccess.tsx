@@ -73,7 +73,6 @@ const OrderSuccess = (listing, paymentDetails) => {
     <DashboardLayout
       navItems={navItems}
       userType="company"
-      userName={currentUser?.name || "Company User"}
     >
       <div className="max-w-4xl mx-auto space-y-6">
         <div>
