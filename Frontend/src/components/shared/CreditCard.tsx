@@ -29,7 +29,10 @@ interface CreditCardProps {
 }
 
 export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) => {
-  const imageUrl = credit.farmlandId.landImages?.[0] || 'https://via.placeholder.com/400x300?text=No+Image';
+  // Safely handle missing farmland data
+  const farmland = credit.farmlandId || {} as any;
+  const farmer = credit.farmerId || {} as any;
+  const imageUrl = farmland.landImages?.[0] || 'https://via.placeholder.com/400x300?text=No+Image';
 
   if (viewMode === 'list') {
     return (
@@ -39,7 +42,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
           <div className="md:w-64 h-48 md:h-auto flex-shrink-0 overflow-hidden">
             <img
               src={imageUrl}
-              alt={credit.farmlandId.landName}
+              alt={farmland.landName || 'Farmland'}
               className="w-full h-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
@@ -53,20 +56,20 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-xl font-bold text-foreground">
-                    {credit.farmlandId.landName}
+                    {farmland.landName || 'Unnamed Land'}
                   </h3>
                   <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600">
-                    {credit.farmlandId.landType || 'Farmland'}
+                    {farmland.landType || 'Farmland'}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
-                    <span>{credit.farmlandId.location}</span>
+                    <span>{farmland.location || 'Unknown Location'}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <User className="w-4 h-4" />
-                    <span>{credit.farmerId.name}</span>
+                    <span>{farmer.name || 'Unknown Farmer'}</span>
                   </div>
                 </div>
               </div>
@@ -93,7 +96,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
                 </div>
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Calendar className="w-4 h-4" />
-                  <span>{credit.farmlandId.area} acres</span>
+                  <span>{farmland.area || 0} acres</span>
                 </div>
               </div>
               <Button
@@ -117,7 +120,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
       <div className="relative h-60 overflow-hidden bg-muted">
         <img
           src={imageUrl}
-          alt={credit.farmlandId.landName}
+          alt={farmland.landName || 'Farmland'}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=No+Image';
@@ -125,7 +128,7 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
         />
         <div className="absolute top-3 right-3">
           <Badge variant="outline" className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-emerald-500 text-emerald-600">
-            {credit.farmlandId.landType || 'Farmland'}
+            {farmland.landType || 'Farmland'}
           </Badge>
         </div>
         <div className="absolute bottom-3 left-3">
@@ -139,15 +142,15 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
       <CardContent className="p-5">
         <div className="mb-3">
           <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1">
-            {credit.farmlandId.landName}
+            {farmland.landName || 'Unnamed Land'}
           </h3>
           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span className="line-clamp-1">{credit.farmlandId.location}</span>
+            <span className="line-clamp-1">{farmland.location || 'Unknown Location'}</span>
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <User className="w-4 h-4 flex-shrink-0" />
-            <span className="line-clamp-1">{credit.farmerId.name}</span>
+            <span className="line-clamp-1">{farmer.name || 'Unknown Farmer'}</span>
           </div>
         </div>
 
@@ -158,11 +161,11 @@ export const CreditCard = ({ credit, viewMode, onAddToCart }: CreditCardProps) =
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="w-4 h-4" />
-            <span>{credit.farmlandId.area} acres</span>
+            <span>{farmland.area || 0} acres</span>
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Leaf className="w-4 h-4 text-emerald-600" />
-            <span className="font-medium text-foreground">{credit.farmlandId.cultivationMethod || 'Sustainable'}</span>
+            <span className="font-medium text-foreground">{farmland.cultivationMethod || 'Sustainable'}</span>
           </div>
         </div>
 

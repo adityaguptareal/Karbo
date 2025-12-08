@@ -483,27 +483,28 @@ export const platformStats = {
 
 export const testimonials = [
   {
-    id: 1,
-    name: "Maria Santos",
-    role: "Farmer, Brazil",
-    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150",
-    content: "This platform transformed my sustainable farming practices into a real income stream. I've earned over $23,000 in carbon credits while doing what I love.",
-    rating: 5
-  },
-  {
-    id: 2,
-    name: "Sarah Chen",
-    role: "Sustainability Director, TechCorp",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-    content: "Finding verified carbon credits used to take months. Now we can meet our sustainability goals in days with full transparency and compliance reports.",
-    rating: 5
-  },
-  {
-    id: 3,
-    name: "John Kimani",
-    role: "Farmer, Kenya",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
-    content: "The verification process is straightforward and fair. My agroforestry credits now fund local education initiatives in my community.",
-    rating: 5
-  }
+  id: 1,
+  name: "Ravi Pratap Singh",
+  role: "Farmer, Uttar Pradesh",
+  avatar: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=150",
+  content: "Karbo ne meri sustainable kheti ko ek naya income source bana diya. Crop residue na jalane par mujhe ₹18,600 ke carbon credits mile — bina kisi tension ke.",
+  rating: 5
+},
+{
+  id: 2,
+  name: "Ananya Mehta",
+  role: "Sustainability Head, EcoTech Industries",
+  avatar: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=150",
+  content: "Verified carbon credits dhundhna pehle mahino ka kaam tha. Karbo ke transparent marketplace se hum apne ESG goals kuch hi dino me achieve kar lete hain.",
+  rating: 5
+},
+{
+  id: 3,
+  name: "Harbhajan Singh",
+  role: "Farmer, Punjab",
+  avatar: "https://images.unsplash.com/photo-1597741090880-5c76f189c48c?w=150",
+  content: "Solar pump aur no-burn farming adopt karne par mujhe ache credits mil rahe hain. Karbo ki process simple hai, aur payment time se milti hai.",
+  rating: 5
+}
+
 ];

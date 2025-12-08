@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf, Menu, X, User, LogOut, ChevronDown, Bell } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown, Bell } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -60,9 +60,7 @@ export function Navbar({
       <div className="flex items-center justify-between h-16">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Leaf className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <img src="/Logo.png" alt="Karbo Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" />
           <span className="font-display text-xl font-semibold text-foreground">
             Karbo
           </span>
