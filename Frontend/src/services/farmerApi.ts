@@ -79,7 +79,9 @@ export interface Farmland {
   cultivationMethod: string;
   status: string;
   createdAt: string;
-  images: string[];
+  landImages: string[];
+  landDocuments: string[];
+  rejectionReason?: string;
 }
 
 export interface FarmerListing {

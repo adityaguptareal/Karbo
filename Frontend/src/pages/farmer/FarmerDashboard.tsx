@@ -78,9 +78,10 @@ const FarmerDashboard = () => {
   // Safe calculations — prevent reduce() crash
   const safeFarmlands = Array.isArray(farmlands) ? farmlands : [];
 
-  const totalFarmlands = stats?.totalFarmlands ?? safeFarmlands.length;
-  const approvedFarmlands = stats?.approvedFarmlands ?? 0;
-  const pendingFarmlands = stats?.pendingFarmlands ?? 0;
+  // Calculate stats directly from the farmlands list to ensure they match
+  const totalFarmlands = safeFarmlands.length;
+  const approvedFarmlands = safeFarmlands.filter(f => f.status === 'verified').length;
+  const pendingFarmlands = safeFarmlands.filter(f => f.status === 'pending_verification' || f.status === 'pending').length;
 
   const totalArea = safeFarmlands.reduce(
     (sum, f) => sum + Number(f.area || 0),
@@ -204,9 +205,9 @@ const FarmerDashboard = () => {
                       key={farm._id}
                       className="flex items-center gap-4 p-4 bg-muted/40 rounded-lg"
                     >
-                      {farm.images?.[0] ? (
+                      {farm.landImages?.[0] ? (
                         <img
-                          src={farm.images[0]}
+                          src={farm.landImages[0]}
                           alt={farm.landName}
                           className="w-16 h-16 rounded-lg object-cover"
                         />
@@ -295,7 +296,7 @@ const FarmerDashboard = () => {
 
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
-               <div className="bg-card rounded-xl border border-border p-6">
+            <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Account info
               </h3>
@@ -323,8 +324,8 @@ const FarmerDashboard = () => {
                 </div>
               </div>
             </div>
-           
-         
+
+
 
             <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
               <h3 className="font-semibold text-foreground mb-2">
