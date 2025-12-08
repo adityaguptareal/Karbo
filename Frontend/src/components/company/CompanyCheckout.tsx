@@ -233,7 +233,7 @@ const CompanyCheckout = () => {
 
   const handlePayment = async () => {
     const { data } = await axios.post(
-      "http://localhost:3000/api/v1/payment/create-order",
+      `${import.meta.env.VITE_API_URL}/payment/create-order`,
       { amount: listing.totalValue, listingId: listing._id  }, 
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
