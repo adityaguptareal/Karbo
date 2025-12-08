@@ -1,7 +1,6 @@
 // src/services/farmerApi.ts
 import axios, { AxiosError } from "axios";
 
-// Base URL from env or direct Render URL
 export const BASE_URL =
   import.meta.env.VITE_API_URL || "https://karbo.onrender.com/api/v1";
 
@@ -13,34 +12,20 @@ const farmerClient = axios.create({
 // Attach raw JWT token in Authorization header (no "Bearer")
 farmerClient.interceptors.request.use((config: any) => {
   const token = localStorage.getItem("token");
-  console.log("🔑 Token check:", {
-    exists: !!token,
-    length: token?.length,
-    preview: token?.substring(0, 20) + "...",
-  });
-  
+
   if (token) {
     if (!config.headers) config.headers = {};
     config.headers["Authorization"] = token;
   } else {
     console.error("❌ No token found in localStorage!");
   }
-  
-  console.log("📤 Request:", {
-    method: config.method?.toUpperCase(),
-    url: config.url,
-    baseURL: config.baseURL,
-    fullURL: `${config.baseURL}${config.url}`,
-    hasAuth: !!config.headers["Authorization"],
-  });
-  
+
   return config;
 });
 
 // Add response interceptor for better error logging
 farmerClient.interceptors.response.use(
   (response) => {
-    console.log("✅ Response success:", response.status);
     return response;
   },
   (error) => {
@@ -61,6 +46,18 @@ export interface FarmerProfile {
   email: string;
   role: string;
   status: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  upiId?: string;
+  bankDetails?: {
+    accountNumber?: string;
+    ifscCode?: string;
+    accountHolderName?: string;
+    bankName?: string;
+  };
 }
 
 export interface FarmerDashboardStats {
@@ -131,15 +128,29 @@ export const farmerApi = {
   async getProfile(): Promise<FarmerProfile> {
     try {
       const res = await farmerClient.get("/profile/me");
-      return extractData<FarmerProfile>(res);
+      const data = extractData<any>(res);
+      // Backend returns { success: true, user: { ... } }
+      return data.user ? data.user : data;
     } catch (error) {
       return rethrow(error);
     }
   },
 
   async updateProfile(payload: {
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    upiId?: string;
+    bankDetails?: {
+      accountNumber?: string;
+      ifscCode?: string;
+      accountHolderName?: string;
+      bankName?: string;
+    };
   }): Promise<FarmerProfile> {
     try {
       const res = await farmerClient.put("/profile/update", payload);
@@ -202,14 +213,6 @@ export const farmerApi = {
     images: File[]
   ): Promise<Farmland> {
     try {
-      console.log("📋 Creating farmland with:", {
-        payload,
-        documentsCount: documents.length,
-        imagesCount: images.length,
-        documentNames: documents.map(f => f.name),
-        imageNames: images.map(f => f.name),
-      });
-
       const formData = new FormData();
       formData.append("landName", payload.landName);
       formData.append("location", payload.location);
@@ -219,39 +222,18 @@ export const farmerApi = {
 
       // Append documents
       documents.forEach((file, index) => {
-        console.log(`📎 Appending document ${index + 1}:`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        });
         formData.append("documents", file);
       });
 
       // Append images
       images.forEach((file, index) => {
-        console.log(`🖼️ Appending image ${index + 1}:`, {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        });
         formData.append("images", file);
       });
-
-      // Log FormData contents
-      console.log("📦 FormData entries:");
-      for (let [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`  ${key}:`, value.name, `(${value.size} bytes)`);
-        } else {
-          console.log(`  ${key}:`, value);
-        }
-      }
 
       const res = await farmerClient.post("/farmland/create", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      console.log("✅ Farmland created successfully!");
       return extractData<Farmland>(res);
     } catch (error) {
       console.error("❌ Failed to create farmland");

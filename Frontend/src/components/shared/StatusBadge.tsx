@@ -1,15 +1,19 @@
 import { cn } from "@/lib/utils";
 
-type StatusType = 'pending' | 'under_review' | 'verified' | 'rejected' | 'completed' | 'failed' | 'active' | 'suspended';
+type StatusType = 'pending' | 'pending_verification' | 'under_review' | 'verified' | 'rejected' | 'completed' | 'failed' | 'active' | 'suspended' | 'approved';
 
 interface StatusBadgeProps {
-  status: StatusType;
+  status: string; // Changed from StatusType to string to accept backend values
   className?: string;
 }
 
-const statusConfig: Record<StatusType, { label: string; className: string }> = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   pending: {
     label: "Pending",
+    className: "bg-warning/10 text-warning border-warning/20"
+  },
+  pending_verification: {
+    label: "Pending Verification",
     className: "bg-warning/10 text-warning border-warning/20"
   },
   under_review: {
@@ -18,6 +22,10 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   verified: {
     label: "Verified",
+    className: "bg-success/10 text-success border-success/20"
+  },
+  approved: {
+    label: "Approved",
     className: "bg-success/10 text-success border-success/20"
   },
   rejected: {
@@ -43,8 +51,13 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status];
-  
+  // Normalize status to lowercase to match keys
+  const normalizedStatus = status?.toLowerCase() || 'pending';
+  const config = statusConfig[normalizedStatus] || {
+    label: status || "Unknown",
+    className: "bg-muted text-muted-foreground border-border"
+  };
+
   return (
     <span className={cn(
       "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",

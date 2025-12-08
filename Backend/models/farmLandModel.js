@@ -27,7 +27,15 @@ const FarmlandSchema = new mongoose.Schema(
     ],
 
     landType: { type: String },
-    cultivationMethod: { type: String },
+    cultivationMethod: {
+      type: String,
+      enum: ["Organic", "Agroforestry", "Regenerative", "Sustainable", "Traditional"],
+      required: true
+    },
+
+    // Auto-calculated fields
+    potentialCredits: { type: Number, default: 0 },
+    estimatedValue: { type: Number, default: 0 },
 
     status: {
       type: String,

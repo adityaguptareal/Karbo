@@ -24,6 +24,16 @@ exports.updateUser = async (req, res) => {
         email: z.string().email().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        pincode: z.string().optional(),
+        upiId: z.string().optional(),
+        bankDetails: z.object({
+            accountNumber: z.string().optional(),
+            ifscCode: z.string().optional(),
+            accountHolderName: z.string().optional(),
+            bankName: z.string().optional(),
+        }).optional(),
     });
 
     try {

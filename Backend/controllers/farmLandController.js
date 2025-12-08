@@ -37,6 +37,19 @@ exports.createFarmland = async (req, res) => {
     const landDocuments = req.files.documents.map(f => f.path);
     const landImages = req.files.images.map(f => f.path);
 
+    // Carbon Credit Calculation Logic 
+    const areaInHectares = validation.data.area; 
+    const method = (validation.data.cultivationMethod || "").toLowerCase();
+
+    let multiplier = 1.0; // Base multiplier
+    if (method.includes("organic")) multiplier = 1.5;
+    else if (method.includes("agroforestry")) multiplier = 2.0;
+    else if (method.includes("regenerative")) multiplier = 1.8;
+    else if (method.includes("sustainable")) multiplier = 1.2;
+
+    const potentialCredits = Math.round(areaInHectares * multiplier);
+    const estimatedValue = potentialCredits * 1100; // Avg price 1100 (1000-1200 range)
+
     const newFarmland = await Farmland.create({
       farmerId: req.user.userId,
       landName: validation.data.landName,
@@ -116,7 +129,7 @@ exports.getFarmlandById = async (req, res) => {
 
 exports.searchFarmland = async (req, res) => {
   try {
-    const { q } = req.query; 
+    const { q } = req.query;
 
     let filter = {};
 

@@ -183,9 +183,9 @@ export default function FarmerMarketplace() {
   const avgPrice =
     myListings.length > 0
       ? Math.round(
-          myListings.reduce((s, l) => s + (l.pricePerCredit || 0), 0) /
-            myListings.length
-        )
+        myListings.reduce((s, l) => s + (l.pricePerCredit || 0), 0) /
+        myListings.length
+      )
       : 0;
 
   const statusBadge = (status: string) => {
@@ -215,7 +215,7 @@ export default function FarmerMarketplace() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={navItems} userType="farmer" userName="Farmer">
+      <DashboardLayout navItems={navItems} userType="farmer">
         <div className="flex justify-center items-center h-64">
           <p className="text-muted-foreground">Loading marketplace...</p>
         </div>
@@ -224,7 +224,7 @@ export default function FarmerMarketplace() {
   }
 
   return (
-    <DashboardLayout navItems={navItems} userType="farmer" userName="Farmer">
+    <DashboardLayout navItems={navItems} userType="farmer">
       <div className="space-y-8">
         {/* Header */}
         <div>

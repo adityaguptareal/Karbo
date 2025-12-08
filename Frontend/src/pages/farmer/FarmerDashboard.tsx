@@ -28,8 +28,8 @@ import {
 
 const navItems = [
   { label: "Dashboard", href: "/farmer/dashboard", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Upload Documents", href: "/farmer/upload", icon: Upload },
+  { label: "Marketplace", href: "/farmer/marketplace", icon: Leaf },
   { label: "Wallet", href: "/farmer/wallet", icon: Wallet },
   { label: "Documents", href: "/farmer/documents", icon: FileText },
   { label: "Settings", href: "/farmer/settings", icon: Settings },
@@ -295,36 +295,7 @@ const FarmerDashboard = () => {
 
           {/* RIGHT COLUMN */}
           <div className="space-y-6">
-            <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">
-                Quick actions
-              </h3>
-
-              <div className="space-y-3">
-                <Button className="w-full justify-start" asChild>
-                  <Link to="/farmer/upload">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload new farmland
-                  </Link>
-                </Button>
-
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link to="/farmer/marketplace">
-                    <Leaf className="w-4 h-4 mr-2" />
-                    Open marketplace
-                  </Link>
-                </Button>
-
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link to="/farmer/settings">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Account settings
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-xl border border-border p-6">
+               <div className="bg-card rounded-xl border border-border p-6">
               <h3 className="font-semibold text-foreground mb-4">
                 Account info
               </h3>
@@ -352,6 +323,8 @@ const FarmerDashboard = () => {
                 </div>
               </div>
             </div>
+           
+         
 
             <div className="bg-primary/5 rounded-xl border border-primary/20 p-6">
               <h3 className="font-semibold text-foreground mb-2">

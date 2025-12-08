@@ -38,6 +38,22 @@ const UserSchema = new mongoose.Schema(
 
     companyDocuments: [{ type: String }],
 
+    // Farmer / User Details
+    phone: { type: String },
+    address: { type: String },
+    city: { type: String },
+    state: { type: String },
+    pincode: { type: String },
+
+    // Payment Details
+    bankDetails: {
+      accountNumber: { type: String },
+      ifscCode: { type: String },
+      accountHolderName: { type: String },
+      bankName: { type: String },
+    },
+    upiId: { type: String },
+
   },
   {
     timestamps: true,
