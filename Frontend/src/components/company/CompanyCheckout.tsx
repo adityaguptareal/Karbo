@@ -246,13 +246,13 @@ const CompanyCheckout = () => {
       key: "rzp_test_RlWT3nMgfVf39q",
       amount: order.amount,
       currency: "INR",
-      name: "Test Company",
-      description: "Test Transaction",
+      name: "Karbo Market",
+      description: "Credit Purchase Transaction",
       order_id: order.id,
       //@ts-ignore
       handler: async function(response: any) {
   try {
-    const verifyUrl = "http://localhost:3000/api/v1/payment/verify-payment";
+    const verifyUrl = `${import.meta.env.VITE_API_URL}/payment/verify-payment`;
     const verifyResponse = await axios.post(
       verifyUrl,
       {
