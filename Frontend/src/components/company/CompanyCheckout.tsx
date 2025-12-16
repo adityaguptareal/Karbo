@@ -93,7 +93,7 @@ const CompanyCheckout = () => {
         setLoading(true);
         setError(null);
 
-        console.log('🔍 Looking for listingId:', listingId); // Debug log
+        //console.log('🔍 Looking for listingId:', listingId); // Debug log
 
         const token = localStorage.getItem('token');
         
@@ -104,14 +104,14 @@ const CompanyCheckout = () => {
         }
         );
 
-        console.log('📦 All listings:', response.data.listings); // Debug log
+        //console.log('📦 All listings:', response.data.listings); // Debug log
 
         if (response.data.listings) {
         const foundListing = response.data.listings.find(
             (listing: any) => listing._id === listingId
         );
 
-        console.log('✅ Found listing:', foundListing); // Debug log
+        //console.log('✅ Found listing:', foundListing); // Debug log
 
         if (foundListing) {
             setListing(foundListing);
@@ -238,8 +238,8 @@ const CompanyCheckout = () => {
       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
     );
 
-    console.log(listing.totalValue, listing._id);
-    console.log(listing);
+    //console.log(listing.totalValue, listing._id);
+    //console.log(listing);
 
     const order = data.order;
     const options = {

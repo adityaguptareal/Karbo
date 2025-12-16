@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     try {
       const result = await adminAPI.getDashboardStats();
-      console.log("This is my Data:", result.data);
+      //console.log("This is my Data:", result.data);
       if (result.data) {
         setStats({
           totalFarmers: result.data.totalFarmers || 0,

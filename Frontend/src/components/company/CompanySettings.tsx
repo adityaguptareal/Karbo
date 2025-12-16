@@ -67,8 +67,8 @@ const CompanySettings = () => {
       if (response.data.user) {
         const user = response.data.user;
         
-        console.log('User data:', user); // ✅ Debug - check what you're receiving
-        console.log('Status:', user.status); // ✅ Debug
+        //console.log('User data:', user); // ✅ Debug - check what you're receiving
+        //console.log('Status:', user.status); // ✅ Debug
         
         setProfileData({
           email: user.email || "",

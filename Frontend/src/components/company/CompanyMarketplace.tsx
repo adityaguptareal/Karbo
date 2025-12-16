@@ -119,25 +119,25 @@ const CompanyMarketplace = () => {
 
   // Fetch user verification status
   const fetchVerificationStatus = async () => {
-    console.log('🚀 Starting fetchVerificationStatus...'); // ✅ Add this
+    //console.log('🚀 Starting fetchVerificationStatus...'); // ✅ Add this
     try {
       const token = localStorage.getItem('token');
-      console.log('🔑 Token:', token ? 'exists' : 'missing'); // ✅ Add this
+      //console.log('🔑 Token:', token ? 'exists' : 'missing'); // ✅ Add this
 
       const response = await axios.get(`${API_BASE_URL}/profile/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log('📡 Response status:', response.status);
+      //console.log('📡 Response status:', response.status);
 
       const data = await response.data.user;
-      console.log('📦 Full response:', data);
+      //console.log('📦 Full response:', data);
 
       if (data) {
         const status = data.status || 'not_submitted';
         setIsVerified(status === 'verified');
 
-        console.log('✅ Setting state - Status:', status, 'IsVerified:', isVerified);
+        //console.log('✅ Setting state - Status:', status, 'IsVerified:', isVerified);
       }
     } catch (error) {
       console.error('❌ Error:', error); // ✅ Add this
@@ -147,7 +147,7 @@ const CompanyMarketplace = () => {
   };
 
   useEffect(() => {
-    console.log('🔄 Component mounted, fetching verification...'); // ✅ Add this
+    //console.log('🔄 Component mounted, fetching verification...'); // ✅ Add this
     fetchVerificationStatus();
   }, []);
 
